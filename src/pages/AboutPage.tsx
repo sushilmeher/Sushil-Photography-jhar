@@ -15,7 +15,9 @@ import {
 } from 'lucide-react';
 import { BUSINESS_INFO } from '../data/mockData';
 import { useFounderPhoto } from '../hooks/useFounderPhoto';
+import { useSiteMedia } from '../hooks/useSiteMedia';
 import { UpdateFounderPhotoModal } from '../components/UpdateFounderPhotoModal';
+import { SocialMediaLinks } from '../components/SocialMediaLinks';
 
 interface AboutPageProps {
   onOpenBooking: () => void;
@@ -24,7 +26,10 @@ interface AboutPageProps {
 
 export const AboutPage: React.FC<AboutPageProps> = ({ onOpenBooking, onNavigate }) => {
   const { photoUrl: founderPhoto } = useFounderPhoto();
+  const { config: siteMedia } = useSiteMedia();
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+
+  const activeFounderPhoto = siteMedia.photographerPhoto || founderPhoto;
 
   return (
     <div id="about-page" className="min-h-screen bg-[#09090b] text-zinc-100 pt-24 pb-20">
@@ -48,7 +53,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onOpenBooking, onNavigate 
           <div className="lg:col-span-5 space-y-4">
             <div className="relative rounded-2xl overflow-hidden border-2 border-[#d4af37]/30 shadow-2xl bg-[#09090b] group">
               <img
-                src={founderPhoto}
+                src={activeFounderPhoto}
                 alt="Sushil Meher - Founder & Lead Artist"
                 className="w-full aspect-[4/5] object-cover transition-transform duration-700 group-hover:scale-105"
                 referrerPolicy="no-referrer"
@@ -92,6 +97,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onOpenBooking, onNavigate 
               >
                 <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
               </a>
+            </div>
+
+            {/* Social media connections */}
+            <div className="pt-2">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-2">Connect on Social Media:</span>
+              <SocialMediaLinks variant="compact" showLabels={true} className="justify-start flex-wrap" />
             </div>
           </div>
 

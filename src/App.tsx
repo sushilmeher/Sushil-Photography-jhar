@@ -24,6 +24,7 @@ import { ContactPage } from './pages/ContactPage';
 import { OrderTrackingPage } from './pages/OrderTrackingPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CustomerDashboardPage } from './pages/CustomerDashboardPage';
+import { PaymentDetailsPage } from './pages/PaymentDetailsPage';
 import { WeddingHighlightsSection } from './components/WeddingHighlightsSection';
 import { PrivateWeddingGallery } from './components/PrivateWeddingGallery';
 
@@ -143,6 +144,11 @@ export default function App() {
         onOpenAuth={() => setShowAuthModal(true)}
         isAdmin={isAdminLoggedIn}
         isCustomer={isCustomerLoggedIn}
+        onLogoutAdmin={() => {
+          setIsAdminLoggedIn(false);
+          setCurrentTab('home');
+          showToast('Logged out of Admin Dashboard.');
+        }}
       />
 
       {/* Page Routing */}
@@ -257,14 +263,26 @@ export default function App() {
 
         {currentTab === 'contact' && <ContactPage />}
 
-        {currentTab === 'track-order' && (
-          <OrderTrackingPage
-            onOpenInvoice={(id) => setInvoiceOrderId(id)}
-            onOpenPayment={(id, amt) => setPaymentData({ orderId: id, amount: amt })}
+        {/* Dedicated Payment Details & UPI Section */}
+        {(currentTab === 'payment' || currentTab === 'payment-details') && (
+          <PaymentDetailsPage
+            initialOrderId={paymentData?.orderId}
+            initialAmount={paymentData?.amount}
+            onBackToHome={() => setCurrentTab('home')}
           />
         )}
 
-        {currentTab === 'admin-dashboard' && (
+        {currentTab === 'track-order' && (
+          <OrderTrackingPage
+            onOpenInvoice={(id) => setInvoiceOrderId(id)}
+            onOpenPayment={(id, amt) => {
+              setPaymentData({ orderId: id, amount: amt });
+              setCurrentTab('payment');
+            }}
+          />
+        )}
+
+        {(currentTab === 'admin' || currentTab === 'admin-dashboard') && (
           <AdminDashboardPage
             onLogout={() => {
               setIsAdminLoggedIn(false);
@@ -272,7 +290,10 @@ export default function App() {
               showToast('Logged out of Admin Dashboard.');
             }}
             onOpenInvoice={(id) => setInvoiceOrderId(id)}
-            onOpenPayment={(id, amt) => setPaymentData({ orderId: id, amount: amt })}
+            onOpenPayment={(id, amt) => {
+              setPaymentData({ orderId: id, amount: amt });
+              setCurrentTab('payment');
+            }}
           />
         )}
 

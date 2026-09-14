@@ -184,11 +184,83 @@ export interface PaymentRecord {
   customerName: string;
   amount: number;
   type: 'Booking Advance' | 'Full Payment' | 'Package Payment' | 'Album Payment' | 'Editing Payment' | 'Custom Order' | string;
-  paymentMethod: 'UPI' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Wallets' | string;
-  status: 'Success' | 'Pending' | 'Failed' | string;
+  paymentMethod: 'UPI' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Wallets' | 'Cash / Offline' | string;
+  status: 'Payment Successful' | 'Payment Pending' | 'Payment Processing' | 'Payment Failed' | 'Payment Refunded' | 'Partially Paid' | 'Fully Paid' | 'Success' | 'Pending' | 'Failed' | string;
   transactionId: string;
   date: string;
+  service?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  advanceAmount?: number;
+  remainingAmount?: number;
+  totalAmount?: number;
+  receiptNumber?: string;
+  notes?: string;
+  upiRefNumber?: string;
 }
+
+export interface PaymentSettings {
+  businessName: string;
+  ownerName: string;
+  paymentPhone: string;
+  secondaryPhone: string;
+  upiId: string;
+  qrCodeUrl: string;
+  paymentGateway: string;
+  gatewayTestMode: boolean;
+  razorpayKeyId: string;
+  bankInstructions: {
+    bankName: string;
+    accountHolder: string;
+    accountNumber: string;
+    ifscCode: string;
+    branch: string;
+  };
+  paymentTerms: string;
+  refundPolicy: string;
+  updatedAt?: string;
+}
+
+export interface PaymentReceiptData {
+  receiptNumber: string;
+  paymentId: string;
+  orderId: string;
+  businessName: string;
+  ownerName: string;
+  paymentPhone: string;
+  secondaryPhone: string;
+  studioAddress: string;
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  service: string;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  paymentDate: string;
+  transactionId: string;
+  advanceAmount?: number;
+  remainingAmount?: number;
+  totalAmount?: number;
+  notes?: string;
+}
+
+export const PAYMENT_SERVICES_LIST = [
+  'Wedding Booking',
+  'Wedding Photography',
+  'Wedding Cinematography',
+  'Pre-Wedding',
+  'Album Design',
+  'Photo Editing',
+  'Wedding Highlights',
+  'Video Editing',
+  'Photo Frames',
+  'Wedding Cards',
+  'Custom Orders',
+] as const;
+
+export type PaymentServiceType = typeof PAYMENT_SERVICES_LIST[number];
 
 export interface ReviewItem {
   id: string;
@@ -544,5 +616,98 @@ export interface UploadSessionRecord {
   progressPercent: number;
   uploadDate: string;
   files: UploadSessionFileRecord[];
+}
+
+// --------------------------------------------------
+// Smart Media Upload System & Placeholders
+// --------------------------------------------------
+export type SmartMediaCategory =
+  | 'Logo'
+  | 'Photographer'
+  | 'Wedding'
+  | 'Pre-Wedding'
+  | 'Album Design'
+  | 'Photo Editing'
+  | 'Wedding Highlights'
+  | 'Wedding Cards'
+  | 'Photo Frames'
+  | 'Payment QR'
+  | 'Promotional'
+  | 'Business'
+  | 'Other';
+
+export interface SmartMediaItem {
+  id: string;
+  name: string;
+  type: string; // "image/png" | "image/jpeg" | "video/mp4" | "application/pdf"
+  sizeFormatted: string;
+  sizeBytes: number;
+  url: string;
+  thumbnailUrl?: string;
+  category: SmartMediaCategory;
+  slotKey?: string; // e.g. "logo_main", "photographer_photo", "payment_qr", "promo_banner_1"
+  usedIn: string; // e.g. "Header & Footer Logo", "Photographer Profile", "Wedding Portfolio"
+  uploadedAt: string;
+  dimensions?: string;
+  caption?: string;
+  featured?: boolean;
+  reorderIndex?: number;
+  title?: string;
+  description?: string;
+  
+  // Specific category extensions
+  beforeUrl?: string;
+  afterUrl?: string;
+  albumPages?: string[];
+  sheetsCount?: number;
+  duration?: string;
+  fileFormat?: string;
+}
+
+export interface SiteMediaConfig {
+  logoMain?: string;
+  logoHeader?: string;
+  logoFooter?: string;
+  logoMobile?: string;
+  logoFavicon?: string;
+  founderPhoto?: string;
+  paymentQrCode?: string;
+  upiId?: string;
+  instagramCover?: string;
+  facebookCover?: string;
+  youtubeCover?: string;
+  promoBanner1?: string;
+  promoBanner2?: string;
+  updatedAt?: string;
+}
+
+export interface SocialMediaSettings {
+  instagramUrl: string;
+  facebookUrl: string;
+  youtubeUrl: string;
+  showInstagram: boolean;
+  showFacebook: boolean;
+  showYouTube: boolean;
+  updatedAt?: string;
+}
+
+export interface WeddingCardSample {
+  id: string;
+  title: string;
+  style: string;
+  imageUrl: string;
+  pdfUrl?: string;
+  description: string;
+  priceEstimate?: string;
+}
+
+export interface PhotoFrameSample {
+  id: string;
+  title: string;
+  size: string;
+  finish: string;
+  imageUrl: string;
+  description: string;
+  priceEstimate?: string;
 }
 

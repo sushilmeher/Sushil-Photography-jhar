@@ -13,6 +13,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { BUSINESS_INFO } from '../data/mockData';
+import { useSiteMedia } from '../hooks/useSiteMedia';
+import { SocialMediaLinks } from './SocialMediaLinks';
 
 interface FooterProps {
   setCurrentTab: (tab: string) => void;
@@ -25,6 +27,9 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenBooking,
   onOpenAdmin,
 }) => {
+  const { config: siteMedia } = useSiteMedia();
+  const footerLogoUrl = siteMedia.logoFooter || siteMedia.logoMain;
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -42,11 +47,21 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#8c6411] p-0.5 flex items-center justify-center">
-                <div className="w-full h-full bg-[#09090b] rounded-[6px] flex items-center justify-center">
-                  <Camera className="w-5 h-5 text-[#d4af37]" />
+              {footerLogoUrl ? (
+                <div className="w-10 h-10 rounded-lg p-0.5 border border-[#d4af37]/40 bg-[#09090b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20 overflow-hidden">
+                  <img
+                    src={footerLogoUrl}
+                    alt="Sushil Photography Footer Logo"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#8c6411] p-0.5 flex items-center justify-center">
+                  <div className="w-full h-full bg-[#09090b] rounded-[6px] flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-[#d4af37]" />
+                  </div>
+                </div>
+              )}
               <div>
                 <h3 className="font-cinzel text-xl font-bold tracking-wider text-white">
                   SUSHIL <span className="text-[#d4af37]">PHOTOGRAPHY</span>
@@ -73,47 +88,9 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
 
             {/* Social Icons */}
-            <div className="flex items-center space-x-3 pt-2">
-              <a
-                id="footer-social-instagram"
-                href={BUSINESS_INFO.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-[#14141a] border border-[#272732] flex items-center justify-center text-zinc-400 hover:text-pink-400 hover:border-pink-500/40 transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a
-                id="footer-social-facebook"
-                href={BUSINESS_INFO.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-[#14141a] border border-[#272732] flex items-center justify-center text-zinc-400 hover:text-blue-400 hover:border-blue-500/40 transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a
-                id="footer-social-youtube"
-                href={BUSINESS_INFO.youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-[#14141a] border border-[#272732] flex items-center justify-center text-zinc-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
-                aria-label="YouTube"
-              >
-                <Youtube className="w-4 h-4" />
-              </a>
-              <a
-                id="footer-social-whatsapp"
-                href={BUSINESS_INFO.whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-[#14141a] border border-[#272732] flex items-center justify-center text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors"
-                aria-label="WhatsApp"
-              >
-                <span className="text-emerald-400 font-bold text-xs">WA</span>
-              </a>
+            <div className="pt-2">
+              <span className="text-[10px] uppercase font-semibold text-zinc-400 block mb-2">Follow Our Channels:</span>
+              <SocialMediaLinks variant="footer" />
             </div>
           </div>
 
@@ -153,6 +130,14 @@ export const Footer: React.FC<FooterProps> = ({
                   className="hover:text-[#d4af37] transition-colors"
                 >
                   Portfolio Gallery
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => navigateTo('payment')}
+                  className="hover:text-[#d4af37] text-[#d4af37]/90 font-medium transition-colors"
+                >
+                  Online Payment & UPI
                 </button>
               </li>
               <li>

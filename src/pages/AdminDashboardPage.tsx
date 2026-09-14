@@ -26,6 +26,8 @@ import {
   HardDrive,
   PackageCheck,
   Palette,
+  UploadCloud,
+  Globe,
 } from 'lucide-react';
 import {
   BookingItem,
@@ -43,6 +45,9 @@ import { AdminVideoManagement } from '../components/AdminVideoManagement';
 import { AdminStorageDashboard } from '../components/AdminStorageDashboard';
 import { AdminFinalDeliveryManager } from '../components/AdminFinalDeliveryManager';
 import { AlbumDesignerPortal } from '../components/AlbumDesignerPortal';
+import { AdminPaymentManagement } from '../components/AdminPaymentManagement';
+import { AdminMediaUploadCenter } from '../components/AdminMediaUploadCenter';
+import { AdminSocialMediaManager } from '../components/AdminSocialMediaManager';
 
 interface AdminDashboardPageProps {
   onLogout: () => void;
@@ -57,6 +62,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<
     | 'overview'
+    | 'media-system'
+    | 'social-settings'
+    | 'payments'
     | 'videos'
     | 'storage'
     | 'designer'
@@ -336,6 +344,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         <div className="flex flex-wrap gap-2 border-b border-[#272732] pb-3">
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: Sparkles },
+            { id: 'media-system', label: 'Smart Media Uploads', icon: UploadCloud },
+            { id: 'social-settings', label: 'Social Media Channels', icon: Globe },
+            { id: 'payments', label: 'Payment Details & UPI', icon: CreditCard },
             { id: 'videos', label: 'Wedding Videos & Highlights', icon: Film },
             { id: 'storage', label: '5 TB Cloud Storage', icon: HardDrive },
             { id: 'designer', label: '12x36 Album Designer Lab', icon: Palette },
@@ -353,6 +364,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             return (
               <button
                 key={tab.id}
+                id={`admin-tab-nav-${tab.id}`}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                   active
@@ -366,6 +378,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             );
           })}
         </div>
+
+        {/* SMART MEDIA UPLOADS & PLACEHOLDERS VIEW */}
+        {activeTab === 'media-system' && <AdminMediaUploadCenter />}
+
+        {/* SOCIAL MEDIA CHANNELS & CLICKABLE ICONS VIEW */}
+        {activeTab === 'social-settings' && <AdminSocialMediaManager />}
+
+        {/* PAYMENT DETAILS & FINANCIAL CENTER VIEW */}
+        {activeTab === 'payments' && <AdminPaymentManagement />}
 
         {/* VIDEOS & HIGHLIGHTS VIEW */}
         {activeTab === 'videos' && <AdminVideoManagement />}

@@ -15,8 +15,11 @@ import {
 } from 'lucide-react';
 import { BUSINESS_INFO } from '../data/mockData';
 import { api } from '../services/api';
+import { useSocialMedia } from '../hooks/useSocialMedia';
+import { SocialMediaLinks } from '../components/SocialMediaLinks';
 
 export const ContactPage: React.FC = () => {
+  const { settings: socialSettings } = useSocialMedia();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -107,47 +110,69 @@ export const ContactPage: React.FC = () => {
             <span className="block text-[10px] text-zinc-400">Jhar, Sohela</span>
           </a>
 
-          <a
-            id="contact-action-instagram"
-            href={BUSINESS_INFO.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-4 rounded-2xl bg-[#121216] border border-[#272732] hover:border-pink-500/60 text-center space-y-2 transition-all group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-              <Instagram className="w-5 h-5" />
-            </div>
-            <span className="block text-xs font-bold text-white">Instagram</span>
-            <span className="block text-[10px] text-zinc-400">@sushilphotographyjhar</span>
-          </a>
+          {socialSettings.showInstagram && socialSettings.instagramUrl && (
+            <a
+              id="contact-action-instagram"
+              href={socialSettings.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-[#121216] border border-[#272732] hover:border-pink-500/60 text-center space-y-2 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                <Instagram className="w-5 h-5" />
+              </div>
+              <span className="block text-xs font-bold text-white">Instagram</span>
+              <span className="block text-[10px] text-zinc-400 truncate">Photos & Reels</span>
+            </a>
+          )}
 
-          <a
-            id="contact-action-facebook"
-            href={BUSINESS_INFO.facebook}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-4 rounded-2xl bg-[#121216] border border-[#272732] hover:border-blue-500/60 text-center space-y-2 transition-all group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-              <Facebook className="w-5 h-5" />
-            </div>
-            <span className="block text-xs font-bold text-white">Facebook</span>
-            <span className="block text-[10px] text-zinc-400">Official Page</span>
-          </a>
+          {socialSettings.showFacebook && socialSettings.facebookUrl && (
+            <a
+              id="contact-action-facebook"
+              href={socialSettings.facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-[#121216] border border-[#272732] hover:border-blue-500/60 text-center space-y-2 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                <Facebook className="w-5 h-5" />
+              </div>
+              <span className="block text-xs font-bold text-white">Facebook</span>
+              <span className="block text-[10px] text-zinc-400 truncate">Community</span>
+            </a>
+          )}
 
-          <a
-            id="contact-action-youtube"
-            href={BUSINESS_INFO.youtube}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-4 rounded-2xl bg-[#121216] border border-[#272732] hover:border-red-500/60 text-center space-y-2 transition-all group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-              <Youtube className="w-5 h-5" />
+          {socialSettings.showYouTube && socialSettings.youtubeUrl && (
+            <a
+              id="contact-action-youtube"
+              href={socialSettings.youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-[#121216] border border-[#272732] hover:border-red-500/60 text-center space-y-2 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                <Youtube className="w-5 h-5" />
+              </div>
+              <span className="block text-xs font-bold text-white">YouTube</span>
+              <span className="block text-[10px] text-zinc-400 truncate">4K Wedding Films</span>
+            </a>
+          )}
+        </div>
+
+        {/* Dedicated Social Media Channels Grid (Admin Editable) */}
+        <div className="bg-[#121217] border border-[#272732] rounded-3xl p-6 sm:p-8 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="font-cinzel text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#d4af37]" />
+                <span>Official Social Media Channels</span>
+              </h2>
+              <p className="text-xs text-zinc-400">
+                Explore real wedding teasers, behind-the-scenes shoots, and client reviews on our verified channels.
+              </p>
             </div>
-            <span className="block text-xs font-bold text-white">YouTube</span>
-            <span className="block text-[10px] text-zinc-400">4K Films</span>
-          </a>
+          </div>
+          <SocialMediaLinks variant="contact" />
         </div>
 
         {/* Contact Form & Studio Details Grid */}

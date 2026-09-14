@@ -11,28 +11,37 @@ import {
   ShieldCheck,
   Search,
   CheckCircle2,
+  CreditCard,
 } from 'lucide-react';
 import { BUSINESS_INFO } from '../data/mockData';
+import { useSiteMedia } from '../hooks/useSiteMedia';
+import { SocialMediaLinks } from './SocialMediaLinks';
 
 interface NavbarProps {
   currentTab: string;
-  setCurrentTab: (tab: string) => void;
+  setCurrentTab?: (tab: string) => void;
+  onNavigate?: (tab: string) => void;
   onOpenBooking: () => void;
   onOpenAuth: () => void;
   isAdmin: boolean;
-  onLogoutAdmin: () => void;
+  isCustomer?: boolean;
+  onLogoutAdmin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentTab,
   setCurrentTab,
+  onNavigate,
   onOpenBooking,
   onOpenAuth,
   isAdmin,
+  isCustomer,
   onLogoutAdmin,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { config: siteMedia } = useSiteMedia();
+  const brandLogoUrl = siteMedia.logoHeader || siteMedia.logoMain;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'photo-editing', label: 'Photo Editing' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'packages', label: 'Packages' },
+    { id: 'payment', label: 'Payment Details' },
     { id: 'booking', label: 'Booking' },
     { id: 'upload-photos', label: 'Upload Photos' },
     { id: 'track-order', label: 'Track Order' },
@@ -61,7 +71,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   const handleNavClick = (id: string) => {
-    setCurrentTab(id);
+    if (onNavigate) {
+      onNavigate(id);
+    } else if (setCurrentTab) {
+      setCurrentTab(id);
+    }
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -113,14 +127,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span className="text-emerald-400 font-medium">WhatsApp</span>
             </a>
-            <a
-              href={BUSINESS_INFO.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-pink-400 transition-colors flex items-center gap-1"
-            >
-              <Instagram className="w-3.5 h-3.5" />
-            </a>
+            <span className="text-zinc-600">•</span>
+            <SocialMediaLinks variant="header" />
           </div>
         </div>
       </div>
@@ -133,11 +141,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => handleNavClick('home')}
           className="flex items-center gap-3 group text-left focus:outline-none"
         >
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] via-[#aa7c11] to-[#6b4e06] p-0.5 flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-[#09090b] rounded-[6px] flex items-center justify-center">
-              <Camera className="w-5 h-5 text-[#d4af37]" />
+          {brandLogoUrl ? (
+            <div className="w-10 h-10 rounded-lg p-0.5 border border-[#d4af37]/40 bg-[#09090b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 transition-transform overflow-hidden">
+              <img
+                src={brandLogoUrl}
+                alt="Sushil Photography Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
-          </div>
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] via-[#aa7c11] to-[#6b4e06] p-0.5 flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-[#09090b] rounded-[6px] flex items-center justify-center">
+                <Camera className="w-5 h-5 text-[#d4af37]" />
+              </div>
+            </div>
+          )}
           <div>
             <span className="font-cinzel text-lg sm:text-xl font-bold tracking-wider text-white group-hover:text-[#f3e5ab] transition-colors flex items-center gap-1.5">
               SUSHIL <span className="text-[#d4af37]">PHOTOGRAPHY</span>
@@ -217,6 +235,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right side CTA & Quick icons */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Pay Online quick button */}
+          <button
+            id="nav-pay-online-btn"
+            onClick={() => handleNavClick('payment')}
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d4af37]/40 bg-[#17171d] text-xs font-semibold text-[#d4af37] hover:bg-[#d4af37]/15 transition-colors"
+            title="Online Payment & UPI Portal"
+          >
+            <CreditCard className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span>Pay Online</span>
+          </button>
+
           {/* Track Order quick button */}
           <button
             id="nav-track-order-btn"
@@ -352,6 +381,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="mt-6 pt-6 border-t border-[#272732] space-y-3">
               <div className="text-xs text-zinc-400">Owner: Sushil Meher</div>
               <div className="text-xs text-zinc-300">Jhar, Sohela, Bargarh, Odisha</div>
+
+              {/* Social Media Links */}
+              <div className="pt-1">
+                <span className="text-[10px] uppercase font-semibold text-zinc-400 block mb-2">Connect with Sushil:</span>
+                <SocialMediaLinks variant="compact" showLabels={true} className="justify-start flex-wrap" />
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <a
                   href={`tel:${BUSINESS_INFO.phone}`}

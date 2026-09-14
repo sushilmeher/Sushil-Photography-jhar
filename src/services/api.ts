@@ -17,6 +17,11 @@ import {
   MasterPhotoItem,
   AlbumSelectionRecord,
   UploadSessionRecord,
+  PaymentSettings,
+  PaymentReceiptData,
+  SmartMediaItem,
+  SiteMediaConfig,
+  SocialMediaSettings,
 } from '../types';
 
 
@@ -219,7 +224,23 @@ export const api = {
     return res.json();
   },
 
-  // Payments
+  // Payments & Settings
+  async getPaymentSettings(): Promise<PaymentSettings> {
+    const res = await fetch('/api/payment-settings');
+    if (!res.ok) throw new Error('Failed to fetch payment settings');
+    return res.json();
+  },
+
+  async updatePaymentSettings(settings: Partial<PaymentSettings>): Promise<{ success: boolean; settings: PaymentSettings }> {
+    const res = await fetch('/api/payment-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) throw new Error('Failed to update payment settings');
+    return res.json();
+  },
+
   async createPaymentIntent(payload: any) {
     const res = await fetch('/api/payments/create-intent', {
       method: 'POST',
@@ -231,17 +252,71 @@ export const api = {
 
   async verifyPayment(
     payload: any
-  ): Promise<{ success: boolean; paymentId: string; transactionId: string; payment: PaymentRecord }> {
+  ): Promise<{
+    success: boolean;
+    paymentId: string;
+    transactionId: string;
+    receiptNumber: string;
+    amount: number;
+    date: string;
+    status: string;
+    payment: PaymentRecord;
+    receipt: PaymentReceiptData;
+    order: Order;
+  }> {
     const res = await fetch('/api/payments/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Payment verification failed' }));
+      throw new Error(err.error || 'Payment verification failed');
+    }
     return res.json();
   },
 
-  async getPayments(): Promise<PaymentRecord[]> {
-    const res = await fetch('/api/payments');
+  async getPayments(filters?: {
+    search?: string;
+    status?: string;
+    method?: string;
+    service?: string;
+  }): Promise<PaymentRecord[]> {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.method) params.append('method', filters.method);
+    if (filters?.service) params.append('service', filters.service);
+
+    const url = `/api/payments${params.toString() ? `?${params.toString()}` : ''}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch payments');
+    return res.json();
+  },
+
+  async updatePaymentStatus(id: string, status: string, notes?: string): Promise<{ success: boolean; payment: PaymentRecord }> {
+    const res = await fetch(`/api/payments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, notes }),
+    });
+    if (!res.ok) throw new Error('Failed to update payment status');
+    return res.json();
+  },
+
+  async recordManualPayment(payload: any): Promise<{ success: boolean; payment: PaymentRecord }> {
+    const res = await fetch('/api/payments/manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to record manual payment');
+    return res.json();
+  },
+
+  async getPaymentReceipt(id: string): Promise<PaymentReceiptData> {
+    const res = await fetch(`/api/payments/receipt/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch payment receipt');
     return res.json();
   },
 
@@ -692,6 +767,96 @@ export const api = {
       body: JSON.stringify({ isArchived }),
     });
     if (!res.ok) throw new Error('Failed to toggle archive');
+    return res.json();
+  },
+
+  // --------------------------------------------------
+  // Smart Media Uploads & Site Media Config
+  // --------------------------------------------------
+  async getMedia(params?: { category?: string; search?: string; slotKey?: string }): Promise<SmartMediaItem[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.category) searchParams.append('category', params.category);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.slotKey) searchParams.append('slotKey', params.slotKey);
+
+    const res = await fetch(`/api/media?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch media');
+    return res.json();
+  },
+
+  async addMedia(item: Partial<SmartMediaItem>): Promise<{ success: boolean; media: SmartMediaItem; siteMediaConfig?: SiteMediaConfig }> {
+    const res = await fetch('/api/media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to upload media');
+    }
+    return res.json();
+  },
+
+  async updateMedia(id: string, updates: Partial<SmartMediaItem>): Promise<{ success: boolean; media: SmartMediaItem }> {
+    const res = await fetch(`/api/media/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update media');
+    }
+    return res.json();
+  },
+
+  async deleteMedia(id: string): Promise<{ success: boolean; message: string; deletedId: string }> {
+    const res = await fetch(`/api/media/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to delete media');
+    }
+    return res.json();
+  },
+
+  async getSiteMedia(): Promise<SiteMediaConfig> {
+    const res = await fetch('/api/site-media');
+    if (!res.ok) throw new Error('Failed to fetch site media configuration');
+    return res.json();
+  },
+
+  async updateSiteMedia(config: Partial<SiteMediaConfig>): Promise<{ success: boolean; siteMediaConfig: SiteMediaConfig }> {
+    const res = await fetch('/api/site-media', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update site media configuration');
+    }
+    return res.json();
+  },
+
+  // --------------------------------------------------
+  // Social Media Settings
+  // --------------------------------------------------
+  async getSocialMedia(): Promise<SocialMediaSettings> {
+    const res = await fetch('/api/social-media');
+    if (!res.ok) throw new Error('Failed to fetch social media settings');
+    return res.json();
+  },
+
+  async updateSocialMedia(settings: Partial<SocialMediaSettings>): Promise<{ success: boolean; socialMediaSettings: SocialMediaSettings }> {
+    const res = await fetch('/api/social-media', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update social media settings');
+    }
     return res.json();
   },
 };

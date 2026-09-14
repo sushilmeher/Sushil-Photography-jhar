@@ -35,6 +35,12 @@ import {
   AlbumSelectionRecord,
   UploadSessionRecord,
   AlbumSelectedPhotoRef,
+  PaymentSettings,
+  PaymentReceiptData,
+  SmartMediaItem,
+  SmartMediaCategory,
+  SiteMediaConfig,
+  SocialMediaSettings,
 } from './src/types.ts';
 
 
@@ -55,28 +61,82 @@ let bookings: Booking[] = [...INITIAL_BOOKINGS];
 let uploads: CustomerUpload[] = [];
 let payments: PaymentRecord[] = [
   {
-    id: 'PAY-RZP-9011',
+    id: 'PAY-SPJ-9011',
     orderId: 'SPJ-ORD-1001',
     customerName: 'Priyabrata Sahoo',
+    customerPhone: '9861023456',
+    customerEmail: 'priyabrata@gmail.com',
+    service: 'Wedding Photography',
     amount: 10000,
-    type: 'Booking Advance',
+    type: 'Advance Payment',
     paymentMethod: 'UPI',
-    status: 'Success',
+    status: 'Partially Paid',
     transactionId: 'UPI-TXN-8849204',
+    receiptNumber: 'SPJ-REC-202601',
+    advanceAmount: 10000,
+    remainingAmount: 15000,
+    totalAmount: 25000,
     date: '2026-01-15 11:45 AM',
   },
   {
-    id: 'PAY-RZP-9012',
+    id: 'PAY-SPJ-9012',
     orderId: 'SPJ-ORD-1002',
     customerName: 'Amit Meher',
+    customerPhone: '9437198765',
+    customerEmail: 'amit.meher@yahoo.com',
+    service: 'Pre-Wedding',
     amount: 12000,
     type: 'Full Payment',
     paymentMethod: 'Net Banking',
-    status: 'Success',
+    status: 'Fully Paid',
     transactionId: 'NB-SBIN-492019',
+    receiptNumber: 'SPJ-REC-202602',
+    advanceAmount: 12000,
+    remainingAmount: 0,
+    totalAmount: 12000,
     date: '2026-02-10 03:00 PM',
   },
+  {
+    id: 'PAY-SPJ-9013',
+    orderId: 'SPJ-ORD-1003',
+    customerName: 'Smruti Ranjan Dash',
+    customerPhone: '7008123456',
+    customerEmail: 'smruti.dash@gmail.com',
+    service: 'Wedding Cinematography',
+    amount: 15000,
+    type: 'Booking Amount',
+    paymentMethod: 'Credit Card',
+    status: 'Partially Paid',
+    transactionId: 'CC-HDFC-991823',
+    receiptNumber: 'SPJ-REC-202603',
+    advanceAmount: 15000,
+    remainingAmount: 25000,
+    totalAmount: 40000,
+    date: '2026-03-05 04:15 PM',
+  },
 ];
+
+let paymentSettings: PaymentSettings = {
+  businessName: 'Sushil Photography Jhar',
+  ownerName: 'Sushil Meher',
+  paymentPhone: '7608814804',
+  secondaryPhone: '7735045136',
+  upiId: '760881480@HDFC',
+  qrCodeUrl: '',
+  paymentGateway: 'Razorpay',
+  gatewayTestMode: true,
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+  bankInstructions: {
+    bankName: 'HDFC BANK LTD.',
+    accountHolder: 'SUSHIL MEHER',
+    accountNumber: '50100802080920',
+    ifscCode: 'HDFC0001817',
+    branch: 'Bargarh, Odisha',
+  },
+  paymentTerms: '• 30% to 50% advance booking deposit is required to lock wedding and event calendar dates.\n• Remaining balance is due prior to album dispatch, frame delivery, or final 4K video handover.\n• GST invoice is generated and provided for all digital and UPI transactions.\n• We accept all major UPI apps, Debit/Credit cards, Net Banking, and direct NEFT/RTGS.',
+  refundPolicy: '• In case of event rescheduling, advance payments can be transferred to an alternate available date with 15 days prior written notice.\n• Cancellations made within 7 days of the reserved event date are non-refundable as gear, crew, and dates are exclusively booked.\n• In the rare event of equipment failure or studio emergency, 100% of monies received will be refunded within 3-5 business days.',
+  updatedAt: new Date().toISOString(),
+};
 let notifications: AppNotification[] = [
   {
     id: 'notif-1',
@@ -552,21 +612,90 @@ app.delete('/api/gallery/:id', (req: Request, res: Response) => {
   res.json({ success: true, id: req.params.id });
 });
 
-// Payment Gateway Integration (Razorpay simulation & ready endpoint)
+// ====================================================
+// PAYMENT DETAILS, SETTINGS & GATEWAY APIS
+// ====================================================
+
+// 1. Payment Settings API (Admin editable: UPI ID, QR Code, Bank details, Terms, Refund Policy)
+app.get('/api/payment-settings', (req: Request, res: Response) => {
+  res.json(paymentSettings);
+});
+
+app.put('/api/payment-settings', (req: Request, res: Response) => {
+  const updates = req.body;
+  paymentSettings = {
+    ...paymentSettings,
+    ...updates,
+    bankInstructions: {
+      ...paymentSettings.bankInstructions,
+      ...(updates.bankInstructions || {}),
+    },
+    updatedAt: new Date().toISOString(),
+  };
+
+  // System notification
+  notifications.unshift({
+    id: generateId('NOTIF'),
+    title: 'Payment Settings Updated',
+    message: `Payment configuration updated by Sushil Meher (UPI ID & QR settings refreshed).`,
+    type: 'system',
+    timestamp: new Date().toLocaleString(),
+    read: false,
+    link: '/admin',
+  });
+
+  res.json({ success: true, settings: paymentSettings });
+});
+
+// 2. Payments Listing API with Search & Filter
+app.get('/api/payments', (req: Request, res: Response) => {
+  const { search, status, method, service } = req.query;
+
+  let filtered = [...payments];
+
+  if (search) {
+    const q = String(search).toLowerCase().trim();
+    filtered = filtered.filter(
+      (p) =>
+        p.customerName.toLowerCase().includes(q) ||
+        p.orderId.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
+        (p.transactionId && p.transactionId.toLowerCase().includes(q)) ||
+        (p.service && p.service.toLowerCase().includes(q)) ||
+        (p.customerPhone && p.customerPhone.includes(q))
+    );
+  }
+
+  if (status && status !== 'All') {
+    filtered = filtered.filter((p) => p.status.toLowerCase() === String(status).toLowerCase());
+  }
+
+  if (method && method !== 'All') {
+    filtered = filtered.filter((p) => p.paymentMethod.toLowerCase() === String(method).toLowerCase());
+  }
+
+  if (service && service !== 'All') {
+    filtered = filtered.filter((p) => p.service?.toLowerCase() === String(service).toLowerCase());
+  }
+
+  res.json(filtered);
+});
+
+// 3. Payment Gateway Intent (Razorpay simulation & ready endpoint)
 app.post('/api/payments/create-intent', (req: Request, res: Response) => {
-  const { orderId, amount, type, customerName, customerPhone } = req.body;
+  const { orderId, amount, type, service, customerName, customerPhone } = req.body;
   const paymentOrderId = `rzp_order_${Date.now()}`;
 
   res.json({
-    keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_sushil_photography',
-    amount: (Number(amount) || 1000) * 100, // paise
+    keyId: process.env.RAZORPAY_KEY_ID || paymentSettings.razorpayKeyId || 'rzp_test_sushil_photography',
+    amount: (Number(amount) || 1000) * 100, // in paise
     currency: 'INR',
-    name: BUSINESS_INFO.name,
-    description: `Payment for ${type || 'Photography Service'} - Order ${orderId}`,
+    name: paymentSettings.businessName,
+    description: `Payment for ${service || type || 'Photography Service'} - Order ${orderId || 'NEW'}`,
     orderId: paymentOrderId,
     prefill: {
       name: customerName || '',
-      contact: customerPhone || BUSINESS_INFO.phone,
+      contact: customerPhone || paymentSettings.paymentPhone,
     },
     theme: {
       color: '#d4af37',
@@ -574,65 +703,306 @@ app.post('/api/payments/create-intent', (req: Request, res: Response) => {
   });
 });
 
+// 4. Payment Verification & Processing Endpoint
 app.post('/api/payments/verify', (req: Request, res: Response) => {
-  const { orderId, amount, paymentMethod, type, customerName } = req.body;
-  const paymentId = generateId('PAY-RZP');
-  const txnId = `TXN-${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const {
+    orderId,
+    amount,
+    paymentMethod,
+    type,
+    service,
+    customerName,
+    customerPhone,
+    customerEmail,
+    customerAddress,
+    notes,
+    upiRefNumber,
+  } = req.body;
 
+  const paymentId = `PAY-SPJ-${Math.floor(100000 + Math.random() * 900000)}`;
+  const txnId = upiRefNumber
+    ? `UPI-REF-${upiRefNumber}`
+    : `TXN-${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const receiptNum = `SPJ-REC-${Date.now().toString().slice(-6)}`;
+  const paidAmount = Number(amount) || 5000;
+  const targetService = service || 'Wedding Booking';
+
+  // Find or link order
+  let existingOrder = orders.find((o) => o.id === orderId);
+
+  // If order not found, create a new order automatically
+  if (!existingOrder) {
+    const newOrderId = orderId || generateId('SPJ-ORD');
+    const totalEstimate =
+      type === 'Full Payment'
+        ? paidAmount
+        : paidAmount * 2; // e.g. 50% advance assumption if custom
+
+    existingOrder = {
+      id: newOrderId,
+      customerName: customerName || 'Valued Client',
+      customerPhone: customerPhone || paymentSettings.paymentPhone,
+      phone: customerPhone || paymentSettings.paymentPhone,
+      email: customerEmail || '',
+      serviceType: targetService,
+      service: targetService,
+      packageName: type || 'Direct Payment Order',
+      package: type || 'Direct Payment Order',
+      totalAmount: totalEstimate,
+      amount: totalEstimate,
+      advancePaid: 0,
+      balanceAmount: totalEstimate,
+      remainingAmount: totalEstimate,
+      paymentStatus: 'Payment Pending',
+      status: 'Payment Confirmed',
+      orderStatus: 'Payment Confirmed',
+      progressPercent: 25,
+      estimatedDelivery: '3 to 7 Days',
+      notes: notes || `Direct customer payment for ${targetService}`,
+      files: [],
+      createdAt: new Date().toISOString(),
+      statusHistory: [
+        {
+          status: 'Order Placed',
+          timestamp: new Date().toLocaleString(),
+          note: `Payment portal generated order for ${customerName || 'Client'}.`,
+        },
+      ],
+    };
+    orders.unshift(existingOrder);
+  }
+
+  // Update order balances and status
+  const currentTotal = existingOrder.totalAmount || existingOrder.amount || paidAmount;
+  const currentAdvance = (existingOrder.advancePaid || 0) + paidAmount;
+  const remaining = Math.max(0, currentTotal - currentAdvance);
+
+  existingOrder.advancePaid = currentAdvance;
+  existingOrder.balanceAmount = remaining;
+  existingOrder.remainingAmount = remaining;
+
+  // Determine updated status
+  let resolvedStatus: string;
+  if (remaining <= 0) {
+    resolvedStatus = 'Fully Paid';
+    existingOrder.paymentStatus = 'Fully Paid';
+  } else if (currentAdvance > 0) {
+    resolvedStatus = 'Partially Paid';
+    existingOrder.paymentStatus = 'Partially Paid';
+  } else {
+    resolvedStatus = 'Payment Successful';
+    existingOrder.paymentStatus = 'Payment Successful';
+  }
+
+  if (existingOrder.orderStatus === 'Booking Received' || existingOrder.orderStatus === 'Payment Pending' || existingOrder.orderStatus === 'Order Placed') {
+    existingOrder.orderStatus = 'Payment Confirmed';
+  }
+
+  if (!existingOrder.statusHistory) existingOrder.statusHistory = [];
+  existingOrder.statusHistory.push({
+    status: resolvedStatus,
+    timestamp: new Date().toLocaleString(),
+    note: `₹${paidAmount.toLocaleString()} received via ${paymentMethod || 'UPI'} (${txnId}). Remaining balance: ₹${remaining.toLocaleString()}.`,
+  });
+
+  // Create payment record
   const newPayment: PaymentRecord = {
     id: paymentId,
-    orderId: orderId || 'SPJ-ORD-1001',
-    customerName: customerName || 'Valued Client',
-    amount: Number(amount) || 5000,
+    orderId: existingOrder.id,
+    customerName: customerName || existingOrder.customerName || 'Valued Client',
+    customerPhone: customerPhone || existingOrder.phone,
+    customerEmail: customerEmail || existingOrder.email,
+    service: targetService,
+    amount: paidAmount,
     type: type || 'Booking Advance',
     paymentMethod: paymentMethod || 'UPI',
-    status: 'Success',
+    status: resolvedStatus,
     transactionId: txnId,
+    receiptNumber: receiptNum,
+    advanceAmount: currentAdvance,
+    remainingAmount: remaining,
+    totalAmount: currentTotal,
     date: new Date().toLocaleString(),
+    notes: notes || '',
+    upiRefNumber: upiRefNumber || '',
   };
 
   payments.unshift(newPayment);
 
-  // Update order status if order exists
-  const order = orders.find((o) => o.id === orderId);
-  if (order) {
-    order.advancePaid = (order.advancePaid || 0) + newPayment.amount;
-    order.remainingAmount = Math.max(0, order.amount - order.advancePaid);
-    order.paymentStatus = order.remainingAmount <= 0 ? 'Paid Full' : 'Advance Paid';
+  // Detailed Receipt Data
+  const receiptData: PaymentReceiptData = {
+    receiptNumber: receiptNum,
+    paymentId: paymentId,
+    orderId: existingOrder.id,
+    businessName: paymentSettings.businessName,
+    ownerName: paymentSettings.ownerName,
+    paymentPhone: paymentSettings.paymentPhone,
+    secondaryPhone: paymentSettings.secondaryPhone,
+    studioAddress: 'Jhar, Sohela, Bargarh District, Odisha - 768033',
+    customerName: newPayment.customerName,
+    customerPhone: newPayment.customerPhone,
+    customerEmail: newPayment.customerEmail,
+    customerAddress: customerAddress || 'Odisha, India',
+    service: targetService,
+    amount: paidAmount,
+    paymentMethod: newPayment.paymentMethod,
+    paymentStatus: resolvedStatus,
+    paymentDate: newPayment.date,
+    transactionId: txnId,
+    advanceAmount: currentAdvance,
+    remainingAmount: remaining,
+    totalAmount: currentTotal,
+    notes: notes || 'Thank you for choosing Sushil Photography Jhar!',
+  };
 
-    if (order.orderStatus === 'Booking Received' || order.orderStatus === 'Payment Pending') {
-      order.orderStatus = 'Payment Confirmed';
-      order.statusHistory?.push({
-        status: 'Payment Confirmed',
-        timestamp: new Date().toLocaleString(),
-        note: `Payment of ₹${newPayment.amount} confirmed via ${newPayment.paymentMethod} (${txnId}).`,
-      });
-    }
-  }
-
-  // System notification
+  // Push system notification for Admin
   notifications.unshift({
     id: generateId('NOTIF'),
-    title: 'Payment Successful',
-    message: `₹${newPayment.amount} received from ${newPayment.customerName} (${newPayment.paymentMethod}).`,
+    title: 'Payment Received',
+    message: `₹${paidAmount.toLocaleString()} received from ${newPayment.customerName} for ${targetService} (${newPayment.paymentMethod}).`,
     type: 'payment',
     timestamp: new Date().toLocaleString(),
     read: false,
     link: '/admin',
   });
 
-  res.json({
+  res.status(201).json({
     success: true,
     paymentId,
     transactionId: txnId,
-    amount: newPayment.amount,
+    receiptNumber: receiptNum,
+    amount: paidAmount,
     date: newPayment.date,
+    status: resolvedStatus,
     payment: newPayment,
+    receipt: receiptData,
+    order: existingOrder,
   });
 });
 
-app.get('/api/payments', (req: Request, res: Response) => {
-  res.json(payments);
+// 5. Admin Payment Status Update Endpoint (Refund, Mark Successful, etc.)
+app.patch('/api/payments/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const payment = payments.find((p) => p.id === id || p.transactionId === id);
+  if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+  const { status, notes } = req.body;
+  if (status) {
+    payment.status = status;
+
+    // If marked as refund, adjust associated order
+    if (status === 'Payment Refunded') {
+      const order = orders.find((o) => o.id === payment.orderId);
+      if (order) {
+        order.advancePaid = Math.max(0, (order.advancePaid || 0) - payment.amount);
+        order.remainingAmount = (order.amount || order.totalAmount || 0) - order.advancePaid;
+        order.paymentStatus = 'Payment Refunded';
+        order.statusHistory?.push({
+          status: 'Payment Refunded',
+          timestamp: new Date().toLocaleString(),
+          note: `Refund of ₹${payment.amount.toLocaleString()} processed for payment ${payment.id}.`,
+        });
+      }
+    }
+  }
+
+  if (notes !== undefined) payment.notes = notes;
+
+  res.json({ success: true, payment });
+});
+
+// 6. Admin Manual / Offline Payment Recording Endpoint
+app.post('/api/payments/manual', (req: Request, res: Response) => {
+  const {
+    orderId,
+    amount,
+    customerName,
+    customerPhone,
+    service,
+    paymentMethod,
+    type,
+    status,
+    notes,
+  } = req.body;
+
+  const paymentId = `PAY-MANUAL-${Math.floor(1000 + Math.random() * 9000)}`;
+  const txnId = `OFFLINE-${Date.now().toString().slice(-8)}`;
+  const receiptNum = `SPJ-REC-${Date.now().toString().slice(-6)}`;
+  const paidAmount = Number(amount) || 1000;
+
+  const order = orders.find((o) => o.id === orderId);
+  if (order) {
+    order.advancePaid = (order.advancePaid || 0) + paidAmount;
+    order.remainingAmount = Math.max(0, (order.amount || order.totalAmount || 0) - order.advancePaid);
+    order.paymentStatus = order.remainingAmount <= 0 ? 'Fully Paid' : 'Partially Paid';
+    order.statusHistory?.push({
+      status: order.paymentStatus,
+      timestamp: new Date().toLocaleString(),
+      note: `Offline payment of ₹${paidAmount.toLocaleString()} recorded by Sushil Meher (${paymentMethod || 'Cash'}).`,
+    });
+  }
+
+  const manualPayment: PaymentRecord = {
+    id: paymentId,
+    orderId: orderId || 'MANUAL-ENTRY',
+    customerName: customerName || (order ? order.customerName : 'Walk-in Client'),
+    customerPhone: customerPhone || (order ? order.phone : ''),
+    service: service || (order ? order.serviceType : 'Wedding Photography'),
+    amount: paidAmount,
+    type: type || 'Advance Payment',
+    paymentMethod: paymentMethod || 'Cash / Offline',
+    status: status || 'Payment Successful',
+    transactionId: txnId,
+    receiptNumber: receiptNum,
+    advanceAmount: order ? order.advancePaid : paidAmount,
+    remainingAmount: order ? order.remainingAmount : 0,
+    totalAmount: order ? order.totalAmount : paidAmount,
+    date: new Date().toLocaleString(),
+    notes: notes || 'Recorded in studio register',
+  };
+
+  payments.unshift(manualPayment);
+
+  res.status(201).json({ success: true, payment: manualPayment });
+});
+
+// 7. Get Receipt by Payment ID or Order ID
+app.get('/api/payments/receipt/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const payment = payments.find(
+    (p) => p.id === id || p.receiptNumber === id || p.orderId === id || p.transactionId === id
+  );
+
+  if (!payment) {
+    return res.status(404).json({ error: 'Payment receipt not found' });
+  }
+
+  const receiptData: PaymentReceiptData = {
+    receiptNumber: payment.receiptNumber || `SPJ-REC-${payment.id.slice(-6)}`,
+    paymentId: payment.id,
+    orderId: payment.orderId,
+    businessName: paymentSettings.businessName,
+    ownerName: paymentSettings.ownerName,
+    paymentPhone: paymentSettings.paymentPhone,
+    secondaryPhone: paymentSettings.secondaryPhone,
+    studioAddress: 'Jhar, Sohela, Bargarh District, Odisha - 768033',
+    customerName: payment.customerName,
+    customerPhone: payment.customerPhone || paymentSettings.paymentPhone,
+    customerEmail: payment.customerEmail || 'contact@client.com',
+    customerAddress: 'Odisha, India',
+    service: payment.service || 'Photography & Cinematography Service',
+    amount: payment.amount,
+    paymentMethod: payment.paymentMethod,
+    paymentStatus: payment.status,
+    paymentDate: payment.date,
+    transactionId: payment.transactionId,
+    advanceAmount: payment.advanceAmount || payment.amount,
+    remainingAmount: payment.remainingAmount || 0,
+    totalAmount: payment.totalAmount || payment.amount,
+    notes: payment.notes || 'Thank you for choosing Sushil Photography Jhar!',
+  };
+
+  res.json(receiptData);
 });
 
 // Invoices
@@ -2853,6 +3223,421 @@ app.patch('/api/storage/master-photo/:id/archive', (req: Request, res: Response)
   });
 });
 
+// ======================================================================
+// SMART MEDIA UPLOAD SYSTEM & SOCIAL MEDIA BACKEND SERVICES
+// ======================================================================
+
+let siteMediaConfig: SiteMediaConfig = {
+  logoMain: '',
+  logoHeader: '',
+  logoFooter: '',
+  logoMobile: '',
+  logoFavicon: '',
+  founderPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+  paymentQrCode: '',
+  upiId: '7608814804@ybl',
+  instagramCover: '',
+  facebookCover: '',
+  youtubeCover: '',
+  promoBanner1: '',
+  promoBanner2: '',
+  updatedAt: new Date().toISOString(),
+};
+
+let socialMediaSettings: SocialMediaSettings = {
+  instagramUrl: 'https://www.instagram.com/sushil__photography_jhar?stkn=dWYxM2Z6cW5hbWt4',
+  facebookUrl: 'https://www.facebook.com/share/1X7CCrhwjN/',
+  youtubeUrl: 'https://youtube.com/@sushilphotographyjhar?si=Sz-sGwGLGphMeUKX',
+  showInstagram: true,
+  showFacebook: true,
+  showYouTube: true,
+  updatedAt: new Date().toISOString(),
+};
+
+let smartMediaList: SmartMediaItem[] = [
+  {
+    id: 'SM-LOGO-01',
+    name: 'Sushil_Photography_Main_Emblem.png',
+    type: 'image/png',
+    sizeFormatted: '1.2 MB',
+    sizeBytes: 1258291,
+    url: '',
+    category: 'Logo',
+    slotKey: 'logo_main',
+    usedIn: 'Header & Footer Brand Logo',
+    uploadedAt: '2026-01-10',
+    title: 'Studio Primary Logo',
+  },
+  {
+    id: 'SM-FOUNDER-01',
+    name: 'Sushil_Meher_Lead_Photographer.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '2.8 MB',
+    sizeBytes: 2936012,
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+    category: 'Photographer',
+    slotKey: 'photographer_photo',
+    usedIn: 'About Page & Artist Bio',
+    uploadedAt: '2026-01-12',
+    title: 'Sushil Meher - Founder & Lead Artist',
+    caption: 'Founder, Master Cinematographer & Senior Colorist',
+  },
+  {
+    id: 'SM-WED-01',
+    name: 'Royal_Odia_Mandap_Sindoor_Dan.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '4.5 MB',
+    sizeBytes: 4718592,
+    url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=85',
+    category: 'Wedding',
+    usedIn: 'Wedding Portfolio Gallery',
+    uploadedAt: '2026-01-15',
+    title: 'Sacred Sindoor Dan Ceremony',
+    caption: 'Traditional Vedic wedding ritual captured in Bargarh',
+    featured: true,
+  },
+  {
+    id: 'SM-WED-02',
+    name: 'Bespoke_Bride_Jaimala_Moment.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '3.9 MB',
+    sizeBytes: 4089446,
+    url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1200&q=85',
+    category: 'Wedding',
+    usedIn: 'Wedding Portfolio Gallery',
+    uploadedAt: '2026-01-18',
+    title: 'Jaimala Garland Exchange',
+    caption: 'Emotional candid exchange with sparkling floral canopy',
+    featured: true,
+  },
+  {
+    id: 'SM-PREWED-01',
+    name: 'Sunset_Temple_Lakeside_Silhouette.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '3.2 MB',
+    sizeBytes: 3355443,
+    url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85',
+    category: 'Pre-Wedding',
+    usedIn: 'Pre-Wedding Showcase',
+    uploadedAt: '2026-01-20',
+    title: 'Heritage Lake Golden Hour',
+    caption: 'Sambalpur lake sunset with natural ambient glow',
+    featured: true,
+  },
+  {
+    id: 'SM-ALBUM-01',
+    name: 'Royal_Heritage_12x36_Panoramic_Cover.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '5.1 MB',
+    sizeBytes: 5347737,
+    url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1200&q=85',
+    category: 'Album Design',
+    usedIn: '12x36 Album Design Portal',
+    uploadedAt: '2026-01-22',
+    title: 'Royal Heritage 12x36 Layflat Album',
+    description: 'Gold-foiled velvet cover with high-definition panoramic print spreads',
+    sheetsCount: 30,
+    albumPages: [
+      'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1200&q=85',
+      'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=85',
+    ],
+  },
+  {
+    id: 'SM-EDIT-01',
+    name: 'Skin_Retouch_Frequency_Separation_Sample.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '4.1 MB',
+    sizeBytes: 4300000,
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85',
+    beforeUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=80',
+    afterUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85',
+    category: 'Photo Editing',
+    usedIn: 'Photo Editing Before/After Studio',
+    uploadedAt: '2026-01-25',
+    title: 'Bridal High-End Skin Retouching',
+    description: 'Blemish removal with pore texture preservation & eye iris brightening',
+  },
+  {
+    id: 'SM-VID-01',
+    name: 'Priya_Rajesh_Cinematic_Wedding_Teaser.mp4',
+    type: 'video/mp4',
+    sizeFormatted: '850 MB',
+    sizeBytes: 891289600,
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85',
+    category: 'Wedding Highlights',
+    usedIn: 'Wedding Highlights Showcase',
+    uploadedAt: '2026-01-26',
+    title: 'Royal Mandap Cinematic Teaser',
+    description: '4K Aerial drone and slow-motion gimbal 3-minute highlight film',
+    duration: '3:45',
+  },
+  {
+    id: 'SM-CARD-01',
+    name: 'Royal_Odia_Wedding_Invitation_Card_Gold_Foil.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '3.4 MB',
+    sizeBytes: 3565158,
+    url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1200&q=85',
+    category: 'Wedding Cards',
+    usedIn: 'Wedding Card & Graphic Design Section',
+    uploadedAt: '2026-01-28',
+    title: 'Traditional Gold Foil Wedding Card',
+    description: 'Laser-cut floral border with Sambalpuri auspicious motifs & bilingual Sanskrit text',
+  },
+  {
+    id: 'SM-FRAME-01',
+    name: 'Luxury_Acrylic_Floating_Photo_Frame_20x30.jpg',
+    type: 'image/jpeg',
+    sizeFormatted: '2.9 MB',
+    sizeBytes: 3040870,
+    url: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1200&q=85',
+    category: 'Photo Frames',
+    usedIn: 'Photo Frame & Wall Decor Section',
+    uploadedAt: '2026-01-29',
+    title: '20x30 Floating Acrylic Wall Frame',
+    description: 'Museum grade anti-reflective acrylic with metallic mounting studs',
+  },
+];
+
+// GET all smart media items (with filter & search)
+app.get('/api/media', (req: Request, res: Response) => {
+  const { category, search, slotKey } = req.query;
+  let results = [...smartMediaList];
+
+  if (category && category !== 'All') {
+    results = results.filter((m) => m.category.toLowerCase() === String(category).toLowerCase());
+  }
+
+  if (slotKey) {
+    results = results.filter((m) => m.slotKey === String(slotKey));
+  }
+
+  if (search) {
+    const q = String(search).toLowerCase();
+    results = results.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        (m.title && m.title.toLowerCase().includes(q)) ||
+        m.category.toLowerCase().includes(q) ||
+        m.usedIn.toLowerCase().includes(q)
+    );
+  }
+
+  res.json(results);
+});
+
+// POST add / upload new smart media
+app.post('/api/media', (req: Request, res: Response) => {
+  const {
+    name,
+    type = 'image/jpeg',
+    url,
+    thumbnailUrl,
+    category = 'Other',
+    slotKey,
+    usedIn,
+    sizeBytes = 2500000,
+    dimensions,
+    caption,
+    title,
+    description,
+    featured = false,
+    beforeUrl,
+    afterUrl,
+    sheetsCount,
+    albumPages,
+    duration,
+  } = req.body;
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Media URL or file data is required.' });
+  }
+
+  const numBytes = Number(sizeBytes) || 2500000;
+  let sizeFormatted = '2.5 MB';
+  if (numBytes >= 1024 * 1024 * 1024) {
+    sizeFormatted = `${(numBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  } else if (numBytes >= 1024 * 1024) {
+    sizeFormatted = `${(numBytes / (1024 * 1024)).toFixed(1)} MB`;
+  } else {
+    sizeFormatted = `${(numBytes / 1024).toFixed(0)} KB`;
+  }
+
+  const newMedia: SmartMediaItem = {
+    id: `SM-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+    name: name || `media_upload_${Date.now()}`,
+    type,
+    sizeFormatted,
+    sizeBytes: numBytes,
+    url,
+    thumbnailUrl: thumbnailUrl || url,
+    category: category as SmartMediaCategory,
+    slotKey: slotKey || undefined,
+    usedIn: usedIn || `${category} Section`,
+    uploadedAt: new Date().toISOString().split('T')[0],
+    dimensions,
+    caption,
+    title: title || name,
+    description,
+    featured: Boolean(featured),
+    beforeUrl,
+    afterUrl,
+    sheetsCount,
+    albumPages,
+    duration,
+  };
+
+  smartMediaList.unshift(newMedia);
+
+  // Auto-connect to site configuration slot if requested
+  if (slotKey) {
+    if (slotKey === 'logo_main' || slotKey === 'logo') {
+      siteMediaConfig.logoMain = url;
+    } else if (slotKey === 'photographer_photo' || slotKey === 'founder_photo') {
+      siteMediaConfig.founderPhoto = url;
+    } else if (slotKey === 'payment_qr' || slotKey === 'qr_code') {
+      siteMediaConfig.paymentQrCode = url;
+      paymentSettings.qrCodeUrl = url;
+    }
+    siteMediaConfig.updatedAt = new Date().toISOString();
+  }
+
+  res.status(201).json({ success: true, media: newMedia, siteMediaConfig });
+});
+
+// PUT update smart media item
+app.put('/api/media/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const idx = smartMediaList.findIndex((m) => m.id === id);
+
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Media item not found' });
+  }
+
+  const existing = smartMediaList[idx];
+  const updated: SmartMediaItem = {
+    ...existing,
+    ...req.body,
+    id: existing.id, // prevent ID change
+  };
+
+  smartMediaList[idx] = updated;
+
+  // If this item was linked to a slotKey, keep slot in sync
+  if (updated.slotKey && updated.url) {
+    if (updated.slotKey === 'logo_main') siteMediaConfig.logoMain = updated.url;
+    if (updated.slotKey === 'photographer_photo') siteMediaConfig.founderPhoto = updated.url;
+    if (updated.slotKey === 'payment_qr') {
+      siteMediaConfig.paymentQrCode = updated.url;
+      paymentSettings.qrCodeUrl = updated.url;
+    }
+  }
+
+  res.json({ success: true, media: updated });
+});
+
+// DELETE smart media item
+app.delete('/api/media/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const idx = smartMediaList.findIndex((m) => m.id === id);
+
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Media item not found' });
+  }
+
+  const deleted = smartMediaList.splice(idx, 1)[0];
+
+  // If deleted item had a slotKey, clear that slot so the placeholder re-appears
+  if (deleted.slotKey) {
+    if (deleted.slotKey === 'logo_main' && siteMediaConfig.logoMain === deleted.url) {
+      siteMediaConfig.logoMain = '';
+    }
+    if (deleted.slotKey === 'photographer_photo' && siteMediaConfig.founderPhoto === deleted.url) {
+      siteMediaConfig.founderPhoto = '';
+    }
+    if (deleted.slotKey === 'payment_qr' && siteMediaConfig.paymentQrCode === deleted.url) {
+      siteMediaConfig.paymentQrCode = '';
+      paymentSettings.qrCodeUrl = '';
+    }
+    siteMediaConfig.updatedAt = new Date().toISOString();
+  }
+
+  res.json({ success: true, message: 'Media item removed successfully', deletedId: id });
+});
+
+// GET site media config
+app.get('/api/site-media', (req: Request, res: Response) => {
+  res.json(siteMediaConfig);
+});
+
+// PUT update site media config
+app.put('/api/site-media', (req: Request, res: Response) => {
+  siteMediaConfig = {
+    ...siteMediaConfig,
+    ...req.body,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (siteMediaConfig.paymentQrCode) {
+    paymentSettings.qrCodeUrl = siteMediaConfig.paymentQrCode;
+  }
+  if (siteMediaConfig.upiId) {
+    paymentSettings.upiId = siteMediaConfig.upiId;
+  }
+
+  res.json({ success: true, siteMediaConfig });
+});
+
+// GET social media settings
+app.get('/api/social-media', (req: Request, res: Response) => {
+  res.json(socialMediaSettings);
+});
+
+// PUT update social media settings
+app.put('/api/social-media', (req: Request, res: Response) => {
+  const {
+    instagramUrl,
+    facebookUrl,
+    youtubeUrl,
+    showInstagram,
+    showFacebook,
+    showYouTube,
+  } = req.body;
+
+  // Validate URLs if provided
+  const validateUrl = (url?: string) => {
+    if (!url || url.trim() === '') return true;
+    try {
+      new URL(url.trim());
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (instagramUrl !== undefined && !validateUrl(instagramUrl)) {
+    return res.status(400).json({ error: 'Please enter a valid Instagram URL.' });
+  }
+  if (facebookUrl !== undefined && !validateUrl(facebookUrl)) {
+    return res.status(400).json({ error: 'Please enter a valid Facebook URL.' });
+  }
+  if (youtubeUrl !== undefined && !validateUrl(youtubeUrl)) {
+    return res.status(400).json({ error: 'Please enter a valid YouTube URL.' });
+  }
+
+  socialMediaSettings = {
+    instagramUrl: instagramUrl !== undefined ? instagramUrl.trim() : socialMediaSettings.instagramUrl,
+    facebookUrl: facebookUrl !== undefined ? facebookUrl.trim() : socialMediaSettings.facebookUrl,
+    youtubeUrl: youtubeUrl !== undefined ? youtubeUrl.trim() : socialMediaSettings.youtubeUrl,
+    showInstagram: showInstagram !== undefined ? Boolean(showInstagram) : socialMediaSettings.showInstagram,
+    showFacebook: showFacebook !== undefined ? Boolean(showFacebook) : socialMediaSettings.showFacebook,
+    showYouTube: showYouTube !== undefined ? Boolean(showYouTube) : socialMediaSettings.showYouTube,
+    updatedAt: new Date().toISOString(),
+  };
+
+  res.json({ success: true, socialMediaSettings });
+});
 
 
 // ------------------------------------
