@@ -1,0 +1,8 @@
+{
+  "name": "Sushil Photography Jhar",
+  "description": "Premium photography studio, cinematography, album design, and photo editing services in Jhar, Sohela, Bargarh, Odisha.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
