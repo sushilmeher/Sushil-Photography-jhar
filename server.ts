@@ -531,11 +531,15 @@ app.patch('/api/orders/:id', (req: Request, res: Response) => {
 
 // 1. GET Photo Editing Services (Returns active for customers, or all if ?all=true)
 app.get('/api/photo-editing/services', (req: Request, res: Response) => {
+  if (!photoEditingServices || photoEditingServices.length === 0) {
+    photoEditingServices = [...DEFAULT_PHOTO_EDITING_SERVICES];
+  }
   const showAll = req.query.all === 'true';
   if (showAll) {
     return res.json(photoEditingServices);
   }
-  res.json(photoEditingServices.filter((s) => s.enabled));
+  const active = photoEditingServices.filter((s) => s.enabled !== false);
+  res.json(active.length > 0 ? active : photoEditingServices);
 });
 
 // 2. POST Add New Photo Editing Service (Admin)

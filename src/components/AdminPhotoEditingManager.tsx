@@ -28,12 +28,16 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { PhotoEditingService, PhotoEditingOrderItem } from '../types';
+import {
+  DEFAULT_PHOTO_EDITING_SERVICES,
+  INITIAL_PHOTO_EDITING_ORDERS,
+} from '../data/photoEditingData';
 
 export const AdminPhotoEditingManager: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'orders' | 'services'>('orders');
-  const [services, setServices] = useState<PhotoEditingService[]>([]);
-  const [orders, setOrders] = useState<PhotoEditingOrderItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<PhotoEditingService[]>(DEFAULT_PHOTO_EDITING_SERVICES);
+  const [orders, setOrders] = useState<PhotoEditingOrderItem[]>(INITIAL_PHOTO_EDITING_ORDERS);
+  const [loading, setLoading] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,11 +74,13 @@ export const AdminPhotoEditingManager: React.FC = () => {
           orderStatus: filterStatus,
         }),
       ]);
-      setServices(svc || []);
-      setOrders(ord || []);
+      setServices(svc && svc.length > 0 ? svc : DEFAULT_PHOTO_EDITING_SERVICES);
+      setOrders(ord && ord.length > 0 ? ord : INITIAL_PHOTO_EDITING_ORDERS);
       setLoading(false);
     } catch (err) {
       console.error(err);
+      setServices(DEFAULT_PHOTO_EDITING_SERVICES);
+      setOrders(INITIAL_PHOTO_EDITING_ORDERS);
       setLoading(false);
     }
   };

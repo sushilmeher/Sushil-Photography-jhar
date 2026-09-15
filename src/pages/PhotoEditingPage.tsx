@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { PhotoEditingService, PhotoEditingUploadFile } from '../types';
+import { DEFAULT_PHOTO_EDITING_SERVICES } from '../data/photoEditingData';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { PhotoEditingPaymentModal } from '../components/PhotoEditingPaymentModal';
 import { PhotoEditingTrackingModal } from '../components/PhotoEditingTrackingModal';
@@ -46,10 +47,12 @@ export const PhotoEditingPage: React.FC<PhotoEditingPageProps> = ({
   // Main view tab
   const [activeTab, setActiveTab] = useState<'order' | 'track' | 'showcase'>('order');
 
-  // Services State
-  const [services, setServices] = useState<PhotoEditingService[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
-  const [loadingServices, setLoadingServices] = useState(true);
+  // Services State - initialized with full default catalog so it never shows 0
+  const [services, setServices] = useState<PhotoEditingService[]>(DEFAULT_PHOTO_EDITING_SERVICES);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(DEFAULT_PHOTO_EDITING_SERVICES[0]?.id || 'edit-svc-1');
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [serviceSearch, setServiceSearch] = useState<string>('');
 
   // Upload & Photos State
   const [uploadedFiles, setUploadedFiles] = useState<PhotoEditingUploadFile[]>([]);
@@ -76,23 +79,34 @@ export const PhotoEditingPage: React.FC<PhotoEditingPageProps> = ({
 
   // Load Services from Backend on Mount
   useEffect(() => {
+    setLoadingServices(true);
     api
       .getPhotoEditingServices()
       .then((data) => {
-        if (data && data.length > 0) {
+        if (data && Array.isArray(data) && data.length > 0) {
           setServices(data);
-          setSelectedServiceId(data[0].id);
+          setSelectedServiceId((prev) => {
+            if (prev && data.some((s) => s.id === prev)) return prev;
+            return data[0].id;
+          });
+        } else {
+          setServices(DEFAULT_PHOTO_EDITING_SERVICES);
+          setSelectedServiceId((prev) => prev || DEFAULT_PHOTO_EDITING_SERVICES[0].id);
         }
         setLoadingServices(false);
       })
       .catch((err) => {
-        console.error('Failed to load services:', err);
+        console.warn('Using local fallback editing services:', err);
+        setServices(DEFAULT_PHOTO_EDITING_SERVICES);
+        setSelectedServiceId((prev) => prev || DEFAULT_PHOTO_EDITING_SERVICES[0].id);
         setLoadingServices(false);
       });
   }, []);
 
   const selectedService =
-    services.find((s) => s.id === selectedServiceId) || services[0] || null;
+    services.find((s) => s.id === selectedServiceId) ||
+    services[0] ||
+    DEFAULT_PHOTO_EDITING_SERVICES[0];
 
   const quantity = Math.max(1, uploadedFiles.length || 1);
   const unitPrice = selectedService?.price || 80;
@@ -426,10 +440,59 @@ export const PhotoEditingPage: React.FC<PhotoEditingPageProps> = ({
                     </span>
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="text-xs font-semibold text-zinc-300 block">
-                      Choose Service Requirement <span className="text-red-400">*</span>
-                    </label>
+                  <div className="space-y-4">
+                    {/* Category Filter Pills & Search */}
+                    <div className="space-y-2.5">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                        <label className="text-xs font-semibold text-zinc-300 block">
+                          Choose Service Requirement <span className="text-red-400">*</span>
+                        </label>
+                        <div className="relative w-full sm:w-64">
+                          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={serviceSearch}
+                            onChange={(e) => setServiceSearch(e.target.value)}
+                            placeholder="Search 35+ services..."
+                            className="w-full pl-8 pr-7 py-1.5 bg-[#0a0a0d] border border-zinc-700/80 rounded-lg text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-[#d4af37]"
+                          />
+                          {serviceSearch && (
+                            <button
+                              type="button"
+                              onClick={() => setServiceSearch('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Category Pills */}
+                      <div className="flex flex-wrap gap-1.5 pb-1">
+                        {['All', ...Array.from(new Set(services.map((s) => s.category || 'Specialty')))].map((cat) => {
+                          const count = cat === 'All' ? services.length : services.filter((s) => (s.category || 'Specialty') === cat).length;
+                          const isSelected = selectedCategory === cat;
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => setSelectedCategory(cat)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-[#d4af37] text-black font-bold shadow-sm'
+                                  : 'bg-[#181822] text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
+                              }`}
+                            >
+                              <span>{cat}</span>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/20 text-black' : 'bg-zinc-800 text-zinc-500'}`}>
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
                     {loadingServices ? (
                       <div className="p-4 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
@@ -438,21 +501,60 @@ export const PhotoEditingPage: React.FC<PhotoEditingPageProps> = ({
                       </div>
                     ) : (
                       <div className="relative">
-                        <select
-                          id="photo-editing-service-select"
-                          value={selectedServiceId}
-                          onChange={(e) => setSelectedServiceId(e.target.value)}
-                          className="w-full px-4 py-3.5 bg-[#0a0a0d] border border-zinc-700 rounded-xl text-white text-sm font-medium focus:outline-none focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
-                        >
-                          {services.map((svc, index) => (
-                            <option key={svc.id} value={svc.id} className="bg-zinc-900 text-white py-2">
-                              {index + 1}. {svc.title} — ₹{svc.price}/{svc.unit} ({svc.category || 'Editing'})
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-xs">
-                          ▼
-                        </div>
+                        {(() => {
+                          const filtered = services.filter((svc) => {
+                            const matchesCat = selectedCategory === 'All' || (svc.category || 'Specialty') === selectedCategory;
+                            const matchesSearch =
+                              !serviceSearch.trim() ||
+                              svc.title.toLowerCase().includes(serviceSearch.toLowerCase().trim()) ||
+                              (svc.description && svc.description.toLowerCase().includes(serviceSearch.toLowerCase().trim()));
+                            return matchesCat && matchesSearch;
+                          });
+
+                          return (
+                            <div className="space-y-2">
+                              <select
+                                id="photo-editing-service-select"
+                                value={selectedServiceId}
+                                onChange={(e) => setSelectedServiceId(e.target.value)}
+                                className="w-full px-4 py-3 bg-[#0a0a0d] border border-zinc-700 rounded-xl text-white text-sm font-medium focus:outline-none focus:border-[#d4af37] transition-colors appearance-none cursor-pointer"
+                              >
+                                {filtered.length === 0 ? (
+                                  <option disabled value="">No services matched filter</option>
+                                ) : (
+                                  filtered.map((svc, index) => (
+                                    <option key={svc.id} value={svc.id} className="bg-zinc-900 text-white py-2">
+                                      {index + 1}. {svc.title} — ₹{svc.price}/{svc.unit} ({svc.category || 'Editing'})
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                              <div className="absolute right-4 top-[18px] pointer-events-none text-zinc-400 text-xs">
+                                ▼
+                              </div>
+
+                              {/* Quick Select Badges for filtered items */}
+                              {filtered.length > 0 && filtered.length <= 8 && (
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                  {filtered.map((svc) => (
+                                    <button
+                                      key={svc.id}
+                                      type="button"
+                                      onClick={() => setSelectedServiceId(svc.id)}
+                                      className={`text-[11px] px-2.5 py-1 rounded-md transition-colors border ${
+                                        selectedServiceId === svc.id
+                                          ? 'border-[#d4af37] bg-[#d4af37]/15 text-[#d4af37] font-semibold'
+                                          : 'border-zinc-800 bg-[#121217] text-zinc-400 hover:text-white hover:border-zinc-700'
+                                      }`}
+                                    >
+                                      {svc.title} (₹{svc.price})
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
