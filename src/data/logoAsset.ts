@@ -1,0 +1,93 @@
+/**
+ * Official Sushil Photography Logo Asset
+ * High-definition vector SVG formatted data URL for embedding in HTML, navbar, footer, and invoices.
+ */
+
+export const SUSHIL_LOGO_SVG = `<svg viewBox="0 0 380 135" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sushil-grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA033" />
+      <stop offset="35%" stop-color="#FF7A00" />
+      <stop offset="100%" stop-color="#D85600" />
+    </linearGradient>
+    <linearGradient id="sushil-grad-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38E0C4" />
+      <stop offset="45%" stop-color="#00C49F" />
+      <stop offset="100%" stop-color="#008E73" />
+    </linearGradient>
+    <linearGradient id="sushil-grad-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF1B0" />
+      <stop offset="30%" stop-color="#F5B335" />
+      <stop offset="70%" stop-color="#D49419" />
+      <stop offset="100%" stop-color="#8A5A00" />
+    </linearGradient>
+    <linearGradient id="sushil-grad-tilak" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00C49F" />
+      <stop offset="50%" stop-color="#43FFD7" />
+      <stop offset="100%" stop-color="#00C49F" />
+    </linearGradient>
+    <filter id="sushil-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.9" />
+    </filter>
+  </defs>
+
+  <g filter="url(#sushil-shadow)">
+    <!-- LEFT EMBLEM: OM / FLAME MOTIF -->
+    <g transform="translate(10, 8)">
+      <path d="M 52 14 C 32 6 12 24 16 52 C 20 74 38 82 44 94 C 48 102 44 112 36 114 C 28 116 22 108 26 98 C 30 88 20 76 10 68 C 2 60 -2 42 4 28 C 10 14 26 4 52 14 Z" fill="url(#sushil-grad-orange)" />
+      <path d="M 58 24 C 42 18 24 32 26 56 C 28 74 44 82 48 94 C 50 98 48 104 42 106 C 36 108 30 102 34 94 C 38 84 26 72 18 64 C 12 56 12 40 18 30 C 26 18 42 14 58 24 Z" fill="url(#sushil-grad-teal)" />
+      <path d="M 44 38 C 38 34 32 40 34 48 C 36 54 44 58 50 64 C 54 70 52 78 46 82 C 40 84 36 80 38 76 C 40 70 32 64 26 56 C 22 50 24 40 30 34 C 36 28 48 30 44 38 Z" fill="url(#sushil-grad-teal)" />
+      <path d="M 54 28 C 50 24 52 18 58 16 C 66 14 74 20 72 30 C 70 40 60 48 48 46 C 54 44 62 40 62 32 C 62 26 58 22 54 28 Z" fill="url(#sushil-grad-orange)" />
+      <circle cx="68" cy="42" r="7" fill="url(#sushil-grad-gold)" />
+      <circle cx="66" cy="40" r="2.5" fill="#FFFFFF" opacity="0.6" />
+    </g>
+
+    <!-- CENTER-TOP: TILAK MARK -->
+    <g transform="translate(145, 24)">
+      <rect x="0" y="0" width="46" height="5.5" rx="2.75" fill="url(#sushil-grad-tilak)" />
+      <rect x="0" y="8" width="46" height="5.5" rx="2.75" fill="url(#sushil-grad-tilak)" />
+      <circle cx="23" cy="6.75" r="3" fill="#FFFFFF" />
+      <circle cx="23" cy="6.75" r="1.5" fill="#FF4400" />
+    </g>
+
+    <!-- CENTER: HINDI CALLIGRAPHY "इवा" -->
+    <g transform="translate(136, 42)">
+      <rect x="0" y="0" width="82" height="6.5" rx="1.5" fill="url(#sushil-grad-gold)" />
+      <polygon points="76,0 86,-10 90,-7 82,3" fill="url(#sushil-grad-gold)" />
+      <rect x="18" y="6.5" width="5.5" height="7" fill="url(#sushil-grad-gold)" />
+      <path d="M 10 13.5 H 32 C 34 13.5 35 18 33 21 C 31 24 24 25 18 25 C 13 25 10 28 10 32 C 10 38 18 41 28 39 C 32 38 34 40 33 43 C 31 46 22 47 14 45 C 8 43 5 36 5 30 C 5 22 12 18 20 18 C 24 18 27 16 26 14.5 H 10 Z" fill="url(#sushil-grad-gold)" />
+      <path d="M 12 44 C 18 45 22 49 18 55 C 15 58 10 57 8 53 C 6 48 8 44 12 44 Z" fill="url(#sushil-grad-gold)" />
+      <path d="M 46 22 C 37 22 36 38 46 41 C 52 42 56 38 56 33 C 56 26 52 22 46 22 Z M 46 27 C 49 27 50 30 50 33 C 50 36 49 37 46 37 C 42 37 41 34 41 31 C 41 28 43 27 46 27 Z" fill="url(#sushil-grad-gold)" />
+      <rect x="54" y="6.5" width="5.5" height="42" rx="1" fill="url(#sushil-grad-gold)" />
+      <rect x="68" y="6.5" width="5.5" height="42" rx="1" fill="url(#sushil-grad-gold)" />
+    </g>
+
+    <!-- RIGHT: PHOTOGRAPHER SILHOUETTE -->
+    <g transform="translate(230, 26)">
+      <path d="M -8 68 L 78 68 L 74 65 L -4 65 Z" fill="url(#sushil-grad-orange)" />
+      <rect x="2" y="8" width="14" height="6.5" rx="1" fill="url(#sushil-grad-orange)" />
+      <polygon points="16,6 24,9 24,14 16,16" fill="url(#sushil-grad-orange)" />
+      <rect x="24" y="9" width="6" height="7" rx="1" fill="url(#sushil-grad-orange)" />
+      <line x1="16" y1="15" x2="16" y2="66" stroke="url(#sushil-grad-orange)" stroke-width="2.5" />
+      <circle cx="36" cy="14" r="7" fill="url(#sushil-grad-orange)" />
+      <path d="M 29 12 C 29 9 37 8 44 11 L 39 16 Z" fill="url(#sushil-grad-orange)" />
+      <path d="M 28 15 L 20 16 L 24 23 L 34 22 L 32 18 Z" fill="url(#sushil-grad-orange)" />
+      <path d="M 33 22 L 44 24 C 47 26 48 34 46 44 L 38 46 L 30 38 L 32 24 Z" fill="url(#sushil-grad-orange)" />
+      <path d="M 44 26 C 52 28 54 36 51 46 C 49 50 45 50 44 46 Z" fill="url(#sushil-grad-orange)" />
+      <path d="M 38 46 L 46 54 L 46 64 L 38 66 L 34 58 L 32 46 Z" fill="url(#sushil-grad-orange)" />
+      <path d="M 30 46 L 24 56 L 24 66 L 36 66 L 36 62 L 28 62 L 32 52 Z" fill="url(#sushil-grad-orange)" />
+    </g>
+
+    <!-- TURQUOISE "PHOTOGRAPHY" -->
+    <g transform="translate(136, 102)">
+      <text x="0" y="0" font-family="'Montserrat', 'Arial Black', sans-serif" font-size="23" font-weight="900" letter-spacing="3.5" fill="url(#sushil-grad-teal)">PHOTOGRAPHY</text>
+    </g>
+
+    <!-- SUBTITLE -->
+    <g transform="translate(136, 120)">
+      <text x="0" y="0" font-family="'Montserrat', sans-serif" font-size="8.5" font-weight="700" letter-spacing="1.2" fill="url(#sushil-grad-gold)">SUSHIL PHOTOGRAPHY JHAR 7608814804</text>
+    </g>
+  </g>
+</svg>`;
+
+export const SUSHIL_LOGO_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(SUSHIL_LOGO_SVG)}`;

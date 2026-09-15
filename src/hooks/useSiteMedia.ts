@@ -6,11 +6,11 @@ const STORAGE_KEY = 'sushil_site_media_config';
 const EVENT_KEY = 'sushil_site_media_changed';
 
 const DEFAULT_CONFIG: SiteMediaConfig = {
-  logoMain: '',
-  logoHeader: '',
-  logoFooter: '',
-  logoMobile: '',
-  logoFavicon: '',
+  logoMain: '/brand-logo.jpg',
+  logoHeader: '/brand-logo.jpg',
+  logoFooter: '/brand-logo.jpg',
+  logoMobile: '/brand-logo.jpg',
+  logoFavicon: '/brand-logo.jpg',
   founderPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
   paymentQrCode: '',
   upiId: '7608814804@ybl',

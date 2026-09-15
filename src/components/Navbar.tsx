@@ -16,6 +16,8 @@ import {
 import { BUSINESS_INFO } from '../data/mockData';
 import { useSiteMedia } from '../hooks/useSiteMedia';
 import { SocialMediaLinks } from './SocialMediaLinks';
+import { SushilLogo } from './SushilLogo';
+import defaultBrandLogo from '../assets/images/regenerated_image_1789494994785.jpg';
 
 interface NavbarProps {
   currentTab: string;
@@ -41,7 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { config: siteMedia } = useSiteMedia();
-  const brandLogoUrl = siteMedia.logoHeader || siteMedia.logoMain;
+  const brandLogoUrl = defaultBrandLogo || siteMedia.logoHeader || siteMedia.logoMain;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -141,21 +143,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => handleNavClick('home')}
           className="flex items-center gap-3 group text-left focus:outline-none"
         >
-          {brandLogoUrl ? (
-            <div className="w-10 h-10 rounded-lg p-0.5 border border-[#d4af37]/40 bg-[#09090b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 transition-transform overflow-hidden">
-              <img
-                src={brandLogoUrl}
-                alt="Sushil Photography Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#d4af37] via-[#aa7c11] to-[#6b4e06] p-0.5 flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-[#09090b] rounded-[6px] flex items-center justify-center">
-                <Camera className="w-5 h-5 text-[#d4af37]" />
-              </div>
-            </div>
-          )}
+          <div className="h-11 px-1.5 rounded-lg border border-[#d4af37]/40 bg-[#09090b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20 group-hover:scale-105 transition-transform overflow-hidden">
+            <img
+              src={defaultBrandLogo || brandLogoUrl || '/brand-logo.jpg'}
+              alt="Sushil Photography Logo"
+              className="h-9 w-auto max-w-[130px] object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <div>
             <span className="font-cinzel text-lg sm:text-xl font-bold tracking-wider text-white group-hover:text-[#f3e5ab] transition-colors flex items-center gap-1.5">
               SUSHIL <span className="text-[#d4af37]">PHOTOGRAPHY</span>

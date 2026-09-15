@@ -6,6 +6,7 @@ export const BUSINESS_INFO = {
   subtitle: 'Professional Photography, Cinematography, Album Design & Photo Editing',
   owner: 'Sushil Meher',
   ownerRole: 'Founder & Lead Artist',
+  logo: '/brand-logo.jpg',
   founderPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80',
   location: 'Jhar, Sohela, Bargarh, Odisha, India',
   phone: '7608814804',

@@ -54,6 +54,7 @@ import {
   DEFAULT_PHOTO_EDITING_SERVICES,
   INITIAL_PHOTO_EDITING_ORDERS,
 } from './src/data/photoEditingData.ts';
+import { SUSHIL_LOGO_DATA_URL } from './src/data/logoAsset.ts';
 
 
 const app = express();
@@ -3935,11 +3936,11 @@ app.patch('/api/storage/master-photo/:id/archive', (req: Request, res: Response)
 // ======================================================================
 
 let siteMediaConfig: SiteMediaConfig = {
-  logoMain: '',
-  logoHeader: '',
-  logoFooter: '',
-  logoMobile: '',
-  logoFavicon: '',
+  logoMain: '/brand-logo.jpg',
+  logoHeader: '/brand-logo.jpg',
+  logoFooter: '/brand-logo.jpg',
+  logoMobile: '/brand-logo.jpg',
+  logoFavicon: '/brand-logo.jpg',
   founderPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
   paymentQrCode: '',
   upiId: '7608814804@ybl',

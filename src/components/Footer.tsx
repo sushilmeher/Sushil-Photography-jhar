@@ -15,6 +15,7 @@ import {
 import { BUSINESS_INFO } from '../data/mockData';
 import { useSiteMedia } from '../hooks/useSiteMedia';
 import { SocialMediaLinks } from './SocialMediaLinks';
+import defaultBrandLogo from '../assets/images/regenerated_image_1789494994785.jpg';
 
 interface FooterProps {
   setCurrentTab: (tab: string) => void;
@@ -28,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenAdmin,
 }) => {
   const { config: siteMedia } = useSiteMedia();
-  const footerLogoUrl = siteMedia.logoFooter || siteMedia.logoMain;
+  const footerLogoUrl = defaultBrandLogo || siteMedia.logoFooter || siteMedia.logoMain;
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -48,11 +49,12 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
               {footerLogoUrl ? (
-                <div className="w-10 h-10 rounded-lg p-0.5 border border-[#d4af37]/40 bg-[#09090b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20 overflow-hidden">
+                <div className="h-11 px-1.5 rounded-lg border border-[#d4af37]/40 bg-[#09090b] flex items-center justify-center shadow-lg shadow-[#d4af37]/20 overflow-hidden">
                   <img
                     src={footerLogoUrl}
                     alt="Sushil Photography Footer Logo"
-                    className="w-full h-full object-contain"
+                    className="h-9 w-auto max-w-[130px] object-contain"
+                    referrerPolicy="no-referrer"
                   />
                 </div>
               ) : (
