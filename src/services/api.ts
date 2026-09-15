@@ -24,6 +24,9 @@ import {
   SocialMediaSettings,
   StudioPoliciesData,
   BankPaymentSubmission,
+  PhotoEditingService,
+  PhotoEditingOrderItem,
+  PhotoEditingUploadFile,
 } from '../types';
 
 
@@ -913,6 +916,179 @@ export const api = {
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || 'Failed to update studio policies');
+    }
+    return res.json();
+  },
+
+  // --------------------------------------------------
+  // Photo Editing Services & Orders APIs
+  // --------------------------------------------------
+  async getPhotoEditingServices(all = false): Promise<PhotoEditingService[]> {
+    const res = await fetch(`/api/photo-editing/services${all ? '?all=true' : ''}`);
+    if (!res.ok) throw new Error('Failed to fetch photo editing services');
+    return res.json();
+  },
+
+  async addPhotoEditingService(service: Partial<PhotoEditingService>): Promise<{ success: boolean; service: PhotoEditingService }> {
+    const res = await fetch('/api/photo-editing/services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(service),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to add service' }));
+      throw new Error(err.error || 'Failed to add service');
+    }
+    return res.json();
+  },
+
+  async updatePhotoEditingService(id: string, updates: Partial<PhotoEditingService>): Promise<{ success: boolean; service: PhotoEditingService }> {
+    const res = await fetch(`/api/photo-editing/services/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to update service' }));
+      throw new Error(err.error || 'Failed to update service');
+    }
+    return res.json();
+  },
+
+  async deletePhotoEditingService(id: string): Promise<{ success: boolean; id: string }> {
+    const res = await fetch(`/api/photo-editing/services/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to delete service' }));
+      throw new Error(err.error || 'Failed to delete service');
+    }
+    return res.json();
+  },
+
+  async getPhotoEditingOrders(params?: { search?: string; paymentStatus?: string; orderStatus?: string }): Promise<PhotoEditingOrderItem[]> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.paymentStatus) query.set('paymentStatus', params.paymentStatus);
+    if (params?.orderStatus) query.set('orderStatus', params.orderStatus);
+
+    const res = await fetch(`/api/photo-editing/orders?${query.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch photo editing orders');
+    return res.json();
+  },
+
+  async trackPhotoEditingOrder(query: { orderId?: string; phone?: string; email?: string }): Promise<PhotoEditingOrderItem> {
+    const params = new URLSearchParams();
+    if (query.orderId) params.set('orderId', query.orderId);
+    if (query.phone) params.set('phone', query.phone);
+    if (query.email) params.set('email', query.email);
+
+    const res = await fetch(`/api/photo-editing/orders/track?${params.toString()}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Tracking failed' }));
+      throw new Error(err.error || 'No matching order found');
+    }
+    return res.json();
+  },
+
+  async getPhotoEditingOrder(id: string): Promise<PhotoEditingOrderItem> {
+    const res = await fetch(`/api/photo-editing/orders/${id}`);
+    if (!res.ok) throw new Error('Order not found');
+    return res.json();
+  },
+
+  async uploadPhotoEditingFiles(files: any[], orderId?: string): Promise<{
+    success: boolean;
+    orderId: string;
+    totalFiles: number;
+    files: PhotoEditingUploadFile[];
+  }> {
+    const res = await fetch('/api/photo-editing/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files, orderId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Upload processing failed' }));
+      throw new Error(err.error || 'Failed to process uploads');
+    }
+    return res.json();
+  },
+
+  async submitPhotoEditingOrder(orderData: any): Promise<{
+    success: boolean;
+    orderId: string;
+    order: PhotoEditingOrderItem;
+    payment: PaymentRecord;
+  }> {
+    const res = await fetch('/api/photo-editing/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to submit order' }));
+      throw new Error(err.error || 'Order submission failed');
+    }
+    return res.json();
+  },
+
+  async updatePhotoEditingOrder(id: string, updates: any): Promise<{ success: boolean; order: PhotoEditingOrderItem }> {
+    const res = await fetch(`/api/photo-editing/orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to update order' }));
+      throw new Error(err.error || 'Failed to update order');
+    }
+    return res.json();
+  },
+
+  async uploadPhotoEditingAdminFiles(
+    id: string,
+    targetFolder: 'edited' | 'final',
+    files: any[]
+  ): Promise<{ success: boolean; order: PhotoEditingOrderItem; uploaded: any[] }> {
+    const res = await fetch(`/api/photo-editing/orders/${id}/files`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetFolder, files }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'File upload failed' }));
+      throw new Error(err.error || 'Failed to upload files');
+    }
+    return res.json();
+  },
+
+  async deletePhotoEditingOrderFile(id: string, fileId: string): Promise<{ success: boolean; order: PhotoEditingOrderItem }> {
+    const res = await fetch(`/api/photo-editing/orders/${id}/files/${fileId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'File deletion failed' }));
+      throw new Error(err.error || 'Failed to delete file');
+    }
+    return res.json();
+  },
+
+  async verifyPhotoEditingPayment(verificationData: any): Promise<{
+    success: boolean;
+    verified: boolean;
+    transactionId: string;
+    receiptNumber: string;
+    amount: number;
+    timestamp: string;
+    message: string;
+  }> {
+    const res = await fetch('/api/photo-editing/verify-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verificationData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Payment verification failed' }));
+      throw new Error(err.error || 'Payment verification failed');
     }
     return res.json();
   },

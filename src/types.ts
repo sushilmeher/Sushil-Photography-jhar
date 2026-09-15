@@ -776,3 +776,89 @@ export interface PhotoFrameSample {
   priceEstimate?: string;
 }
 
+export interface PhotoEditingService {
+  id: string;
+  title: string;
+  price: number;
+  unit: 'photo' | 'page' | 'image' | string;
+  description: string;
+  category?: string;
+  enabled: boolean;
+  sampleBeforeUrl?: string;
+  sampleAfterUrl?: string;
+}
+
+export interface PhotoEditingUploadFile {
+  id: string;
+  name: string;
+  size?: number;
+  sizeBytes?: number;
+  sizeFormatted: string;
+  type: string;
+  url: string;
+  previewUrl?: string;
+  storagePath?: string;
+  status?: string;
+  uploadedAt: string;
+}
+
+export interface PhotoEditingOrderItem {
+  id: string; // SP-EDIT-XXXXXX
+  customerName: string;
+  customerPhone: string;
+  customerWhatsapp?: string;
+  customerEmail?: string;
+  eventType?: string;
+  serviceId: string;
+  serviceTitle: string;
+  unitPrice: number;
+  unit: string;
+  quantity: number;
+  subtotal: number;
+  totalAmount: number;
+  advancePaid: number;
+  balanceAmount: number;
+  paymentStatus: 'Pending' | 'Payment Verification Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded' | string;
+  orderStatus:
+    | 'Payment Pending'
+    | 'Payment Processing'
+    | 'Payment Successful'
+    | 'Order Received'
+    | 'Editing'
+    | 'Review'
+    | 'Completed'
+    | 'Delivered'
+    | 'Payment Failed'
+    | string;
+  specialInstructions?: string;
+  requiredDeliveryDate?: string;
+  orderDate: string;
+  estimatedDelivery?: string;
+  originalFiles: PhotoEditingUploadFile[];
+  editedFiles?: {
+    id: string;
+    name: string;
+    sizeFormatted: string;
+    url: string;
+    uploadedAt: string;
+  }[];
+  finalFiles?: {
+    id: string;
+    name: string;
+    sizeFormatted: string;
+    url: string;
+    uploadedAt: string;
+  }[];
+  paymentId?: string;
+  paymentMethod?: string;
+  transactionId?: string;
+  paymentDate?: string;
+  paymentProofUrl?: string;
+  statusHistory?: {
+    status: string;
+    timestamp: string;
+    note: string;
+  }[];
+}
+
+

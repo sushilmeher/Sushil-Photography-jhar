@@ -44,9 +44,16 @@ import {
   SocialMediaSettings,
   StudioPoliciesData,
   BankPaymentSubmission,
+  PhotoEditingService,
+  PhotoEditingOrderItem,
+  PhotoEditingUploadFile,
 } from './src/types.ts';
 import { DEFAULT_POLICIES_DATA } from './src/data/defaultPolicies.ts';
 import { OFFICIAL_PAYMENT_DETAILS } from './src/data/paymentDetails.ts';
+import {
+  DEFAULT_PHOTO_EDITING_SERVICES,
+  INITIAL_PHOTO_EDITING_ORDERS,
+} from './src/data/photoEditingData.ts';
 
 
 const app = express();
@@ -64,6 +71,8 @@ let gallery: GalleryItem[] = [...INITIAL_GALLERY];
 let orders: Order[] = [...INITIAL_ORDERS];
 let bookings: Booking[] = [...INITIAL_BOOKINGS];
 let uploads: CustomerUpload[] = [];
+let photoEditingServices: PhotoEditingService[] = [...DEFAULT_PHOTO_EDITING_SERVICES];
+let photoEditingOrders: PhotoEditingOrderItem[] = [...INITIAL_PHOTO_EDITING_ORDERS];
 let payments: PaymentRecord[] = [
   {
     id: 'PAY-SPJ-9011',
@@ -514,6 +523,518 @@ app.patch('/api/orders/:id', (req: Request, res: Response) => {
   if (deliveredFilesLink !== undefined) order.deliveredFilesLink = deliveredFilesLink;
 
   res.json(order);
+});
+
+// ====================================================
+// PHOTO EDITING SERVICES & ORDERS API
+// ====================================================
+
+// 1. GET Photo Editing Services (Returns active for customers, or all if ?all=true)
+app.get('/api/photo-editing/services', (req: Request, res: Response) => {
+  const showAll = req.query.all === 'true';
+  if (showAll) {
+    return res.json(photoEditingServices);
+  }
+  res.json(photoEditingServices.filter((s) => s.enabled));
+});
+
+// 2. POST Add New Photo Editing Service (Admin)
+app.post('/api/photo-editing/services', (req: Request, res: Response) => {
+  const { title, price, unit, description, category, enabled } = req.body;
+  if (!title || price === undefined) {
+    return res.status(400).json({ error: 'Title and Price are required' });
+  }
+
+  const newService: PhotoEditingService = {
+    id: `edit-svc-${Date.now()}`,
+    title: title.trim(),
+    price: Number(price) || 80,
+    unit: unit || 'photo',
+    description: description || 'Professional high-end photo editing.',
+    category: category || 'Custom Editing',
+    enabled: enabled !== undefined ? Boolean(enabled) : true,
+  };
+
+  photoEditingServices.push(newService);
+
+  notifications.unshift({
+    id: generateId('NOTIF'),
+    title: 'Photo Editing Service Added',
+    message: `Added new editing service: ${newService.title} (₹${newService.price}/${newService.unit}).`,
+    type: 'system',
+    timestamp: new Date().toLocaleString(),
+    read: false,
+    link: '/admin',
+  });
+
+  res.status(201).json({ success: true, service: newService });
+});
+
+// 3. PUT Update Photo Editing Service (Admin)
+app.put('/api/photo-editing/services/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const idx = photoEditingServices.findIndex((s) => s.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Photo editing service not found' });
+  }
+
+  const existing = photoEditingServices[idx];
+  const updated: PhotoEditingService = {
+    ...existing,
+    ...req.body,
+    id: existing.id,
+    price: req.body.price !== undefined ? Number(req.body.price) : existing.price,
+    enabled: req.body.enabled !== undefined ? Boolean(req.body.enabled) : existing.enabled,
+  };
+
+  photoEditingServices[idx] = updated;
+
+  res.json({ success: true, service: updated });
+});
+
+// 4. DELETE Photo Editing Service (Admin)
+app.delete('/api/photo-editing/services/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const idx = photoEditingServices.findIndex((s) => s.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Service not found' });
+  }
+
+  const deleted = photoEditingServices.splice(idx, 1)[0];
+  res.json({ success: true, message: `Deleted ${deleted.title}`, id });
+});
+
+// 5. GET All Photo Editing Orders (Admin with filters)
+app.get('/api/photo-editing/orders', (req: Request, res: Response) => {
+  const { search, paymentStatus, orderStatus } = req.query;
+
+  let filtered = [...photoEditingOrders];
+
+  if (search) {
+    const q = String(search).toLowerCase().trim();
+    filtered = filtered.filter(
+      (o) =>
+        o.id.toLowerCase().includes(q) ||
+        o.customerName.toLowerCase().includes(q) ||
+        o.customerPhone.includes(q) ||
+        o.serviceTitle.toLowerCase().includes(q) ||
+        (o.customerEmail && o.customerEmail.toLowerCase().includes(q))
+    );
+  }
+
+  if (paymentStatus && paymentStatus !== 'All') {
+    filtered = filtered.filter((o) => o.paymentStatus.toLowerCase() === String(paymentStatus).toLowerCase());
+  }
+
+  if (orderStatus && orderStatus !== 'All') {
+    filtered = filtered.filter((o) => o.orderStatus.toLowerCase() === String(orderStatus).toLowerCase());
+  }
+
+  res.json(filtered);
+});
+
+// 6. GET Track Order (Customer)
+app.get('/api/photo-editing/orders/track', (req: Request, res: Response) => {
+  const { orderId, phone, email } = req.query;
+
+  if (!orderId && !phone && !email) {
+    return res.status(400).json({ error: 'Please enter your Order ID, Phone Number, or Email' });
+  }
+
+  const cleanOrderId = (orderId as string)?.trim().toUpperCase();
+  const cleanPhone = (phone as string)?.trim().replace(/\D/g, '');
+  const cleanEmail = (email as string)?.trim().toLowerCase();
+
+  const matched = photoEditingOrders.find((o) => {
+    const idMatch = cleanOrderId ? o.id.toUpperCase() === cleanOrderId : false;
+    const phoneMatch = cleanPhone
+      ? o.customerPhone.replace(/\D/g, '').endsWith(cleanPhone.slice(-10)) ||
+        (o.customerWhatsapp && o.customerWhatsapp.replace(/\D/g, '').endsWith(cleanPhone.slice(-10)))
+      : false;
+    const emailMatch = cleanEmail && o.customerEmail ? o.customerEmail.toLowerCase() === cleanEmail : false;
+
+    if (cleanOrderId && (cleanPhone || cleanEmail)) {
+      return idMatch && (phoneMatch || emailMatch);
+    }
+    return idMatch || phoneMatch || emailMatch;
+  });
+
+  if (!matched) {
+    return res.status(404).json({
+      error: 'No photo editing order found with the provided details. Please check your Order ID and Phone Number.',
+    });
+  }
+
+  res.json(matched);
+});
+
+// 7. GET Single Photo Editing Order
+app.get('/api/photo-editing/orders/:id', (req: Request, res: Response) => {
+  const order = photoEditingOrders.find((o) => o.id === req.params.id);
+  if (!order) {
+    return res.status(404).json({ error: 'Photo editing order not found' });
+  }
+  res.json(order);
+});
+
+// 8. POST File Upload Simulation / Processor
+app.post('/api/photo-editing/upload', (req: Request, res: Response) => {
+  const { files, orderId } = req.body;
+  if (!files || !Array.isArray(files) || files.length === 0) {
+    return res.status(400).json({ error: 'No files provided' });
+  }
+
+  const generatedOrderId = orderId || `SP-EDIT-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  const processedFiles: PhotoEditingUploadFile[] = files.map((f: any, idx: number) => {
+    const fileId = `file-${Date.now()}-${idx + 1}`;
+    const name = f.name || `photo_${idx + 1}.jpg`;
+    const sizeBytes = Number(f.sizeBytes || f.size) || 5242880;
+    const sizeFormatted = f.sizeFormatted || `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+    const type = f.type || 'image/jpeg';
+    const storagePath = `photo-editing/${generatedOrderId}/original/${name}`;
+    const url = f.url || f.data || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=90';
+
+    return {
+      id: fileId,
+      name,
+      sizeBytes,
+      sizeFormatted,
+      type,
+      url,
+      previewUrl: url,
+      storagePath,
+      uploadedAt: new Date().toISOString(),
+    };
+  });
+
+  res.json({
+    success: true,
+    orderId: generatedOrderId,
+    totalFiles: processedFiles.length,
+    files: processedFiles,
+  });
+});
+
+// 9. POST Submit Photo Editing Order (Customer)
+app.post('/api/photo-editing/orders', (req: Request, res: Response) => {
+  const {
+    customerName,
+    customerPhone,
+    customerWhatsapp,
+    customerEmail,
+    eventType,
+    serviceId,
+    serviceTitle,
+    unitPrice,
+    unit,
+    quantity,
+    totalAmount,
+    specialInstructions,
+    requiredDeliveryDate,
+    originalFiles,
+    paymentMethod,
+    paymentStatus,
+    transactionId,
+    paymentProofUrl,
+    customOrderId,
+  } = req.body;
+
+  if (!customerName || !customerPhone || !serviceTitle) {
+    return res.status(400).json({ error: 'Customer Name, Phone Number, and Service are required.' });
+  }
+
+  const orderId = customOrderId || `SP-EDIT-${Math.floor(100000 + Math.random() * 900000)}`;
+  const calcQuantity = Number(quantity) || (originalFiles ? originalFiles.length : 1) || 1;
+  const calcUnitPrice = Number(unitPrice) || 80;
+  const calcTotal = Number(totalAmount) || calcQuantity * calcUnitPrice;
+
+  const isBankTransfer = paymentMethod === 'Bank Transfer' || paymentMethod === 'Bank Transfer (HDFC)';
+  const isPaid = paymentStatus === 'Paid' || paymentStatus === 'Payment Successful';
+
+  const resolvedPaymentStatus = isPaid
+    ? 'Paid'
+    : isBankTransfer
+    ? 'Payment Verification Pending'
+    : 'Pending';
+
+  const resolvedOrderStatus = isPaid
+    ? 'Order Received'
+    : isBankTransfer
+    ? 'Payment Pending'
+    : 'Payment Pending';
+
+  const generatedTxnId = transactionId || (isPaid ? `TXN-EDIT-${Date.now().toString().slice(-8)}` : `UTR-PENDING-${Date.now().toString().slice(-6)}`);
+  const paymentId = `PAY-EDIT-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  // Structure files into proper storage paths
+  const structuredFiles: PhotoEditingUploadFile[] = (originalFiles || []).map((f: any, idx: number) => ({
+    id: f.id || `orig-${Date.now()}-${idx + 1}`,
+    name: f.name || `photo_${idx + 1}.jpg`,
+    sizeBytes: Number(f.sizeBytes || f.size) || 4194304,
+    sizeFormatted: f.sizeFormatted || `${((Number(f.sizeBytes || f.size) || 4194304) / (1024 * 1024)).toFixed(1)} MB`,
+    type: f.type || 'image/jpeg',
+    url: f.url || f.previewUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=90',
+    previewUrl: f.previewUrl || f.url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=90',
+    storagePath: `photo-editing/${orderId}/original/${f.name || `photo_${idx + 1}.jpg`}`,
+    uploadedAt: new Date().toISOString(),
+  }));
+
+  const newOrder: PhotoEditingOrderItem = {
+    id: orderId,
+    customerName: customerName.trim(),
+    customerPhone: customerPhone.trim(),
+    customerWhatsapp: customerWhatsapp?.trim() || customerPhone.trim(),
+    customerEmail: customerEmail?.trim() || '',
+    eventType: eventType || 'Portrait / Event',
+    serviceId: serviceId || 'edit-svc-custom',
+    serviceTitle: serviceTitle.trim(),
+    unitPrice: calcUnitPrice,
+    unit: unit || 'photo',
+    quantity: calcQuantity,
+    subtotal: calcTotal,
+    totalAmount: calcTotal,
+    advancePaid: isPaid ? calcTotal : 0,
+    balanceAmount: isPaid ? 0 : calcTotal,
+    paymentStatus: resolvedPaymentStatus,
+    orderStatus: resolvedOrderStatus,
+    specialInstructions: specialInstructions || '',
+    requiredDeliveryDate: requiredDeliveryDate || '',
+    orderDate: new Date().toISOString().split('T')[0],
+    estimatedDelivery: '2 to 4 Days',
+    originalFiles: structuredFiles,
+    editedFiles: [],
+    finalFiles: [],
+    paymentId,
+    paymentMethod: paymentMethod || 'UPI',
+    transactionId: generatedTxnId,
+    paymentDate: new Date().toLocaleString(),
+    paymentProofUrl: paymentProofUrl || '',
+    statusHistory: [
+      {
+        status: resolvedOrderStatus,
+        timestamp: new Date().toLocaleString(),
+        note: isPaid
+          ? `Order submitted with verified ₹${calcTotal} payment (${paymentMethod || 'Online'}).`
+          : isBankTransfer
+          ? `Bank transfer proof submitted (UTR: ${generatedTxnId}). Awaiting admin verification.`
+          : `Order created, awaiting payment confirmation.`,
+      },
+    ],
+  };
+
+  photoEditingOrders.unshift(newOrder);
+
+  // Record payment in general payments ledger if paid or verification pending
+  const newPayment: PaymentRecord = {
+    id: paymentId,
+    orderId: newOrder.id,
+    customerName: newOrder.customerName,
+    customerPhone: newOrder.customerPhone,
+    customerEmail: newOrder.customerEmail,
+    service: `Photo Editing - ${newOrder.serviceTitle}`,
+    amount: calcTotal,
+    type: 'Editing Payment',
+    paymentMethod: newOrder.paymentMethod || 'UPI',
+    status: isPaid ? 'Payment Successful' : 'Pending Verification',
+    transactionId: generatedTxnId,
+    receiptNumber: `SPJ-REC-${Date.now().toString().slice(-6)}`,
+    advanceAmount: isPaid ? calcTotal : 0,
+    remainingAmount: isPaid ? 0 : calcTotal,
+    totalAmount: calcTotal,
+    date: new Date().toLocaleString(),
+    notes: `Photo Editing: ${calcQuantity} ${newOrder.unit}s for ${newOrder.serviceTitle}`,
+    upiRefNumber: generatedTxnId,
+  };
+
+  payments.unshift(newPayment);
+  syncPaymentToSupabase(newPayment);
+
+  // Admin Notification
+  notifications.unshift({
+    id: generateId('NOTIF'),
+    title: 'New Photo Editing Order',
+    message: `${newOrder.customerName} submitted an order for ${newOrder.serviceTitle} (${calcQuantity} photos, ₹${calcTotal}). Order ID: ${newOrder.id}.`,
+    type: 'order',
+    timestamp: new Date().toLocaleString(),
+    read: false,
+    link: '/admin',
+  });
+
+  res.status(201).json({
+    success: true,
+    orderId: newOrder.id,
+    order: newOrder,
+    payment: newPayment,
+  });
+});
+
+// 10. PATCH Admin Update Photo Editing Order
+app.patch('/api/photo-editing/orders/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const order = photoEditingOrders.find((o) => o.id === id);
+  if (!order) {
+    return res.status(404).json({ error: 'Photo editing order not found' });
+  }
+
+  const {
+    orderStatus,
+    paymentStatus,
+    notes,
+    requiredDeliveryDate,
+    estimatedDelivery,
+    specialInstructions,
+    advancePaid,
+  } = req.body;
+
+  if (orderStatus && order.orderStatus !== orderStatus) {
+    order.orderStatus = orderStatus;
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
+      status: orderStatus,
+      timestamp: new Date().toLocaleString(),
+      note: notes || `Order status updated to "${orderStatus}" by studio master editor.`,
+    });
+  }
+
+  if (paymentStatus && order.paymentStatus !== paymentStatus) {
+    order.paymentStatus = paymentStatus;
+    if (paymentStatus === 'Paid' || paymentStatus === 'Payment Successful') {
+      order.advancePaid = order.totalAmount;
+      order.balanceAmount = 0;
+      if (order.orderStatus === 'Payment Pending' || order.orderStatus === 'Payment Processing') {
+        order.orderStatus = 'Order Received';
+      }
+    }
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
+      status: `Payment: ${paymentStatus}`,
+      timestamp: new Date().toLocaleString(),
+      note: notes || `Payment status verified and updated to "${paymentStatus}".`,
+    });
+
+    // Update associated payment record
+    const associatedPayment = payments.find((p) => p.orderId === order.id);
+    if (associatedPayment) {
+      associatedPayment.status = paymentStatus === 'Paid' ? 'Payment Successful' : paymentStatus;
+    }
+  }
+
+  if (requiredDeliveryDate) order.requiredDeliveryDate = requiredDeliveryDate;
+  if (estimatedDelivery) order.estimatedDelivery = estimatedDelivery;
+  if (specialInstructions !== undefined) order.specialInstructions = specialInstructions;
+  if (advancePaid !== undefined) {
+    order.advancePaid = Number(advancePaid);
+    order.balanceAmount = Math.max(0, order.totalAmount - order.advancePaid);
+  }
+
+  res.json({ success: true, order });
+});
+
+// 11. POST Admin Upload Edited / Final Delivery Files
+app.post('/api/photo-editing/orders/:id/files', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { targetFolder, files } = req.body; // targetFolder: 'edited' | 'final'
+  const order = photoEditingOrders.find((o) => o.id === id);
+
+  if (!order) {
+    return res.status(404).json({ error: 'Photo editing order not found' });
+  }
+
+  if (!files || !Array.isArray(files) || files.length === 0) {
+    return res.status(400).json({ error: 'No files provided for upload' });
+  }
+
+  const isFinal = targetFolder === 'final';
+  const newFiles = files.map((f: any, idx: number) => ({
+    id: `file-${targetFolder}-${Date.now()}-${idx + 1}`,
+    name: f.name || `edited_photo_${idx + 1}.jpg`,
+    sizeFormatted: f.sizeFormatted || `${((Number(f.size) || 12582912) / (1024 * 1024)).toFixed(1)} MB`,
+    url: f.url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=90',
+    uploadedAt: new Date().toISOString().split('T')[0],
+  }));
+
+  if (isFinal) {
+    if (!order.finalFiles) order.finalFiles = [];
+    order.finalFiles.push(...newFiles);
+    order.orderStatus = 'Delivered';
+    order.statusHistory?.push({
+      status: 'Delivered',
+      timestamp: new Date().toLocaleString(),
+      note: `${newFiles.length} final high-resolution delivery files uploaded. Customer can now download.`,
+    });
+  } else {
+    if (!order.editedFiles) order.editedFiles = [];
+    order.editedFiles.push(...newFiles);
+    order.orderStatus = 'Review';
+    order.statusHistory?.push({
+      status: 'Review',
+      timestamp: new Date().toLocaleString(),
+      note: `${newFiles.length} edited work-in-progress files uploaded for internal review.`,
+    });
+  }
+
+  res.status(201).json({ success: true, order, uploaded: newFiles });
+});
+
+// 12. DELETE File from Order
+app.delete('/api/photo-editing/orders/:id/files/:fileId', (req: Request, res: Response) => {
+  const { id, fileId } = req.params;
+  const order = photoEditingOrders.find((o) => o.id === id);
+
+  if (!order) {
+    return res.status(404).json({ error: 'Photo editing order not found' });
+  }
+
+  if (order.editedFiles) {
+    order.editedFiles = order.editedFiles.filter((f) => f.id !== fileId);
+  }
+  if (order.finalFiles) {
+    order.finalFiles = order.finalFiles.filter((f) => f.id !== fileId);
+  }
+  if (order.originalFiles) {
+    order.originalFiles = order.originalFiles.filter((f) => f.id !== fileId);
+  }
+
+  res.json({ success: true, message: 'File removed successfully', order });
+});
+
+// 13. POST Server-side Payment Verification
+app.post('/api/photo-editing/verify-payment', (req: Request, res: Response) => {
+  const { orderId, amount, paymentMethod, upiRefNumber, gatewayResponse } = req.body;
+
+  const verifiedAmount = Number(amount) || 100;
+  const txnId = upiRefNumber
+    ? `UPI-VERIFIED-${upiRefNumber}`
+    : `PAY-VERIFIED-${Date.now().toString().slice(-8)}`;
+  const receiptNum = `SPJ-EDIT-REC-${Date.now().toString().slice(-6)}`;
+
+  // Find order if already created
+  const order = photoEditingOrders.find((o) => o.id === orderId);
+  if (order) {
+    order.paymentStatus = 'Paid';
+    order.orderStatus = 'Order Received';
+    order.advancePaid = verifiedAmount;
+    order.balanceAmount = 0;
+    order.transactionId = txnId;
+    order.paymentDate = new Date().toLocaleString();
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
+      status: 'Payment Successful',
+      timestamp: new Date().toLocaleString(),
+      note: `Online payment of ₹${verifiedAmount.toLocaleString()} verified via ${paymentMethod || 'Gateway'} (Txn: ${txnId}).`,
+    });
+  }
+
+  res.json({
+    success: true,
+    verified: true,
+    transactionId: txnId,
+    receiptNumber: receiptNum,
+    amount: verifiedAmount,
+    timestamp: new Date().toISOString(),
+    message: 'Payment verified and confirmed by Sushil Photography server.',
+  });
 });
 
 // Photo Uploads

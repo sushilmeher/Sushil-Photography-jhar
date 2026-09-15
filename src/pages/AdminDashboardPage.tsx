@@ -48,6 +48,8 @@ import { AlbumDesignerPortal } from '../components/AlbumDesignerPortal';
 import { AdminPaymentManagement } from '../components/AdminPaymentManagement';
 import { AdminMediaUploadCenter } from '../components/AdminMediaUploadCenter';
 import { AdminSocialMediaManager } from '../components/AdminSocialMediaManager';
+import { AdminPhotoEditingManager } from '../components/AdminPhotoEditingManager';
+import { Wand2 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
   onLogout: () => void;
@@ -344,6 +346,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         <div className="flex flex-wrap gap-2 border-b border-[#272732] pb-3">
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: Sparkles },
+            { id: 'photo-editing', label: 'Photo Editing Service & Orders', icon: Wand2 },
             { id: 'media-system', label: 'Smart Media Uploads', icon: UploadCloud },
             { id: 'social-settings', label: 'Social Media Channels', icon: Globe },
             { id: 'payments', label: 'Payment Details & UPI', icon: CreditCard },
@@ -378,6 +381,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             );
           })}
         </div>
+
+        {/* PHOTO EDITING SERVICE & ORDERS VIEW */}
+        {activeTab === 'photo-editing' && <AdminPhotoEditingManager />}
 
         {/* SMART MEDIA UPLOADS & PLACEHOLDERS VIEW */}
         {activeTab === 'media-system' && <AdminMediaUploadCenter />}
