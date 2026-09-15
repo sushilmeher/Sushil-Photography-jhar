@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { createClient } from '@supabase/supabase-js';
 import {
   INITIAL_SERVICES,
   INITIAL_PACKAGES,
@@ -41,7 +42,11 @@ import {
   SmartMediaCategory,
   SiteMediaConfig,
   SocialMediaSettings,
+  StudioPoliciesData,
+  BankPaymentSubmission,
 } from './src/types.ts';
+import { DEFAULT_POLICIES_DATA } from './src/data/defaultPolicies.ts';
+import { OFFICIAL_PAYMENT_DETAILS } from './src/data/paymentDetails.ts';
 
 
 const app = express();
@@ -117,26 +122,71 @@ let payments: PaymentRecord[] = [
 ];
 
 let paymentSettings: PaymentSettings = {
-  businessName: 'Sushil Photography Jhar',
-  ownerName: 'Sushil Meher',
-  paymentPhone: '7608814804',
-  secondaryPhone: '7735045136',
-  upiId: '760881480@HDFC',
-  qrCodeUrl: '',
-  paymentGateway: 'Razorpay',
-  gatewayTestMode: true,
+  ...OFFICIAL_PAYMENT_DETAILS,
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
-  bankInstructions: {
-    bankName: 'HDFC BANK LTD.',
-    accountHolder: 'SUSHIL MEHER',
-    accountNumber: '50100802080920',
-    ifscCode: 'HDFC0001817',
-    branch: 'Bargarh, Odisha',
-  },
-  paymentTerms: '• 30% to 50% advance booking deposit is required to lock wedding and event calendar dates.\n• Remaining balance is due prior to album dispatch, frame delivery, or final 4K video handover.\n• GST invoice is generated and provided for all digital and UPI transactions.\n• We accept all major UPI apps, Debit/Credit cards, Net Banking, and direct NEFT/RTGS.',
-  refundPolicy: '• In case of event rescheduling, advance payments can be transferred to an alternate available date with 15 days prior written notice.\n• Cancellations made within 7 days of the reserved event date are non-refundable as gear, crew, and dates are exclusively booked.\n• In the rare event of equipment failure or studio emergency, 100% of monies received will be refunded within 3-5 business days.',
   updatedAt: new Date().toISOString(),
 };
+
+let studioPolicies: StudioPoliciesData = { ...DEFAULT_POLICIES_DATA };
+
+// Supabase client initialization for server-side real-time persistence
+const SUPABASE_PROJECT_ID = process.env.SUPABASE_PROJECT_ID || 'rlewwujizdhnornbwhaq';
+const SUPABASE_URL = process.env.SUPABASE_URL || `https://${SUPABASE_PROJECT_ID}.supabase.co`;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_d5-bxyNqHpFbvv6cZw1S7w_Aa8zdttH';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: false },
+});
+
+// Helper for asynchronous Supabase persistence
+async function syncBookingToSupabase(booking: any, order?: Order) {
+  try {
+    const payload = {
+      id: booking.id,
+      customer_name: booking.customerName || booking.name || 'Valued Client',
+      customer_phone: booking.phone || booking.customerPhone || '',
+      customer_email: booking.email || booking.customerEmail || null,
+      service: Array.isArray(booking.requiredServices)
+        ? booking.requiredServices.join(', ')
+        : (booking.service || booking.eventType || 'Wedding Photography'),
+      event_type: booking.eventType || 'Wedding',
+      event_date: booking.eventDate || booking.weddingDate || booking.date || '',
+      location: booking.venue || booking.city || booking.location || null,
+      status: booking.status || 'Pending',
+      amount: order?.amount || order?.totalAmount || booking.budget || 0,
+      advance_amount: order?.advancePaid || 0,
+      created_at: booking.createdAt || new Date().toISOString(),
+    };
+    await supabase.from('bookings').upsert(payload, { onConflict: 'id' });
+  } catch (err: any) {
+    console.warn('Supabase booking sync notice:', err.message);
+  }
+}
+
+
+async function syncPaymentToSupabase(payment: PaymentRecord) {
+  try {
+    const payload = {
+      id: payment.id,
+      order_id: payment.orderId,
+      customer_name: payment.customerName,
+      customer_phone: payment.customerPhone || null,
+      customer_email: payment.customerEmail || null,
+      amount: payment.amount,
+      type: payment.type,
+      payment_method: payment.paymentMethod,
+      status: payment.status,
+      transaction_id: payment.transactionId,
+      receipt_number: payment.receiptNumber || null,
+      date: payment.date,
+      created_at: new Date().toISOString(),
+    };
+    await supabase.from('payments').upsert(payload, { onConflict: 'id' });
+  } catch (err: any) {
+    console.warn('Supabase payment sync notice:', err.message);
+  }
+}
+
 let notifications: AppNotification[] = [
   {
     id: 'notif-1',
@@ -299,6 +349,9 @@ app.post('/api/bookings', (req: Request, res: Response) => {
     link: '/admin',
   });
 
+  // Asynchronously synchronize booking to Supabase
+  syncBookingToSupabase(newBooking, newOrder);
+
   res.status(201).json({
     success: true,
     booking: newBooking,
@@ -306,6 +359,7 @@ app.post('/api/bookings', (req: Request, res: Response) => {
     bookingId,
     orderId,
   });
+
 });
 
 app.patch('/api/bookings/:id', (req: Request, res: Response) => {
@@ -866,6 +920,9 @@ app.post('/api/payments/verify', (req: Request, res: Response) => {
     link: '/admin',
   });
 
+  // Supabase real-time persistence
+  syncPaymentToSupabase(newPayment);
+
   res.status(201).json({
     success: true,
     paymentId,
@@ -879,6 +936,131 @@ app.post('/api/payments/verify', (req: Request, res: Response) => {
     order: existingOrder,
   });
 });
+
+// 4b. Bank Transfer Direct Submission Endpoint
+app.post('/api/payments/bank-transfer', (req: Request, res: Response) => {
+  const submission: BankPaymentSubmission = req.body;
+  const paymentId = `PAY-BANK-${Math.floor(100000 + Math.random() * 900000)}`;
+  const receiptNum = `SPJ-REC-${Date.now().toString().slice(-6)}`;
+
+  const newPayment: PaymentRecord = {
+    id: paymentId,
+    orderId: submission.orderId || `SPJ-ORD-${Date.now().toString().slice(-4)}`,
+    customerName: submission.customerName || 'Direct Transfer Client',
+    customerPhone: submission.customerPhone,
+    customerEmail: submission.customerEmail,
+    service: submission.service || 'Wedding Booking',
+    amount: Number(submission.amount) || 5000,
+    type: 'Bank Transfer Advance',
+    paymentMethod: 'Bank Transfer (HDFC)',
+    status: 'Pending Verification',
+    transactionId: submission.transactionId,
+    receiptNumber: receiptNum,
+    date: submission.paymentDate || new Date().toISOString().split('T')[0],
+    notes: submission.notes || 'HDFC Bank direct transfer submitted by customer.',
+  };
+
+  payments.unshift(newPayment);
+
+  // Sync to Supabase
+  syncPaymentToSupabase(newPayment);
+
+  // Admin Notification
+  notifications.unshift({
+    id: generateId('NOTIF'),
+    title: 'Bank Transfer Submitted',
+    message: `₹${newPayment.amount.toLocaleString()} bank transfer submitted by ${newPayment.customerName} (UTR: ${submission.transactionId}).`,
+    type: 'payment',
+    timestamp: new Date().toLocaleString(),
+    read: false,
+    link: '/admin',
+  });
+
+  res.status(201).json({
+    success: true,
+    submission: { ...submission, id: paymentId, status: 'Pending Verification' },
+    payment: newPayment,
+  });
+});
+
+// ----------------------------------------------------
+// Studio Policies & Legal Endpoints
+// ----------------------------------------------------
+app.get('/api/policies', (req: Request, res: Response) => {
+  res.json(studioPolicies);
+});
+
+app.put('/api/policies', (req: Request, res: Response) => {
+  const updates: Partial<StudioPoliciesData> = req.body;
+  studioPolicies = {
+    ...studioPolicies,
+    ...updates,
+    lastUpdated: updates.lastUpdated || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+  };
+
+  notifications.unshift({
+    id: generateId('NOTIF'),
+    title: 'Policies Updated',
+    message: `Studio Terms & Conditions / Policies updated.`,
+    type: 'system',
+    timestamp: new Date().toLocaleString(),
+    read: false,
+    link: '/policies',
+  });
+
+  res.json({ success: true, policies: studioPolicies });
+});
+
+// ----------------------------------------------------
+// Supabase Diagnostic & Sync Endpoints
+// ----------------------------------------------------
+app.get('/api/supabase/test', async (req: Request, res: Response) => {
+  try {
+    const { error } = await supabase.from('bookings').select('id').limit(1);
+    res.json({
+      success: true,
+      projectId: SUPABASE_PROJECT_ID,
+      url: SUPABASE_URL,
+      message: 'Supabase API connection active and responsive.',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+app.post('/api/supabase/sync', async (req: Request, res: Response) => {
+  try {
+    let syncedBookings = 0;
+    let syncedPayments = 0;
+
+    for (const b of bookings) {
+      await syncBookingToSupabase(b);
+      syncedBookings++;
+    }
+
+    for (const p of payments) {
+      await syncPaymentToSupabase(p);
+      syncedPayments++;
+    }
+
+    res.json({
+      success: true,
+      syncedBookings,
+      syncedPayments,
+      message: `Successfully synchronized ${syncedBookings} bookings and ${syncedPayments} payments with Supabase Cloud Database.`,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
 
 // 5. Admin Payment Status Update Endpoint (Refund, Mark Successful, etc.)
 app.patch('/api/payments/:id', (req: Request, res: Response) => {

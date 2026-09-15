@@ -22,6 +22,8 @@ import {
   SmartMediaItem,
   SiteMediaConfig,
   SocialMediaSettings,
+  StudioPoliciesData,
+  BankPaymentSubmission,
 } from '../types';
 
 
@@ -859,5 +861,48 @@ export const api = {
     }
     return res.json();
   },
+
+  // --------------------------------------------------
+  // Bank Transfer Submissions & Verification
+  // --------------------------------------------------
+  async submitBankPayment(submission: BankPaymentSubmission): Promise<{
+    success: boolean;
+    submission: BankPaymentSubmission;
+    receipt?: PaymentReceiptData;
+  }> {
+    const res = await fetch('/api/payments/bank-transfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(submission),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Bank transfer submission failed' }));
+      throw new Error(err.error || 'Failed to submit bank transfer');
+    }
+    return res.json();
+  },
+
+  // --------------------------------------------------
+  // Policies & Legal Settings
+  // --------------------------------------------------
+  async getPolicies(): Promise<StudioPoliciesData> {
+    const res = await fetch('/api/policies');
+    if (!res.ok) throw new Error('Failed to fetch studio policies');
+    return res.json();
+  },
+
+  async updatePolicies(data: StudioPoliciesData): Promise<{ success: boolean; policies: StudioPoliciesData }> {
+    const res = await fetch('/api/policies', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update studio policies');
+    }
+    return res.json();
+  },
 };
+
 

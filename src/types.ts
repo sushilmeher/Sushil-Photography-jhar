@@ -209,16 +209,38 @@ export interface PaymentSettings {
   paymentGateway: string;
   gatewayTestMode: boolean;
   razorpayKeyId: string;
+  gatewaySecret?: string;
+  webhookSecret?: string;
   bankInstructions: {
     bankName: string;
     accountHolder: string;
     accountNumber: string;
+    confirmAccountNumber?: string;
     ifscCode: string;
     branch: string;
+    branchAddress?: string;
+    accountType?: 'SAVINGS' | 'CURRENT' | string;
   };
   paymentTerms: string;
   refundPolicy: string;
   updatedAt?: string;
+}
+
+export interface BankPaymentSubmission {
+  id?: string;
+  orderId?: string;
+  bookingId?: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  service: string;
+  amount: number;
+  transactionId: string; // UTR or Ref number
+  paymentDate: string;
+  screenshotUrl?: string;
+  notes?: string;
+  status: 'Pending Verification' | 'Payment Successful' | 'Rejected';
+  submittedAt?: string;
 }
 
 export interface PaymentReceiptData {
@@ -688,8 +710,51 @@ export interface SocialMediaSettings {
   showInstagram: boolean;
   showFacebook: boolean;
   showYouTube: boolean;
+  whatsappNumber?: string;
+  showWhatsApp?: boolean;
+  phoneNumber?: string;
+  showPhone?: boolean;
   updatedAt?: string;
 }
+
+export interface PolicySection {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  category: 'terms' | 'privacy' | 'refund' | 'payment' | 'usage' | 'upload' | 'security' | 'gallery' | 'ip' | 'thirdparty' | 'forcemajeure' | 'responsibilities';
+  order: number;
+  isPublished: boolean;
+  lastModified?: string;
+}
+
+export interface StudioPoliciesData {
+  businessName: string;
+  ownerName: string;
+  location: string;
+  email: string;
+  phoneNumbers: string[];
+  lastUpdated: string;
+  sections: PolicySection[];
+}
+
+export interface SupabaseConfig {
+  projectId: string;
+  supabaseUrl: string;
+  anonKey: string;
+  serviceRoleKey?: string;
+  isConnected: boolean;
+  autoSync: boolean;
+  lastSyncTime?: string;
+  tables: {
+    bookings: string;
+    payments: string;
+    orders: string;
+    contactMessages: string;
+  };
+}
+
 
 export interface WeddingCardSample {
   id: string;

@@ -23,7 +23,7 @@ export interface MediaUploadPlaceholderProps {
   accept?: string; // e.g. "image/*", "image/png,image/jpeg,image/webp,image/svg+xml", "video/mp4", "application/pdf"
   maxSizeMB?: number;
   currentUrl?: string;
-  category?: SmartMediaCategory;
+  category?: SmartMediaCategory | string;
   slotKey?: string; // e.g. "logo_main", "photographer_photo", "payment_qr"
   usedIn?: string;
   aspectRatio?: 'square' | 'video' | 'portrait' | 'auto' | 'banner';
@@ -119,11 +119,12 @@ export const MediaUploadPlaceholder: React.FC<MediaUploadPlaceholderProps> = ({
             type: file.type || 'image/jpeg',
             sizeBytes: file.size,
             url: resultUrl,
-            category,
+            category: category as SmartMediaCategory,
             slotKey,
             usedIn: usedIn || `${category} section`,
             title: title || file.name,
           });
+
 
           // If slotKey matches site media config, persist to site media and dispatch update
           if (slotKey) {

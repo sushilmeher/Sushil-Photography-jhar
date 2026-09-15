@@ -35,6 +35,7 @@ import {
 import { PaymentReceiptModal } from '../components/PaymentReceiptModal';
 import { useSiteMedia } from '../hooks/useSiteMedia';
 import { MediaUploadPlaceholder } from '../components/MediaUploadPlaceholder';
+import { SushilBankTransferSection } from '../components/SushilBankTransferSection';
 
 interface PaymentDetailsPageProps {
   initialOrderId?: string;
@@ -1145,81 +1146,33 @@ export const PaymentDetailsPage: React.FC<PaymentDetailsPageProps> = ({
         )}
 
         {/* ==================================================== */}
-        {/* TAB 3: BANK PAYMENT INSTRUCTIONS & POLICIES */}
+        {/* TAB 3: BANK PAYMENT INSTRUCTIONS & SUBMISSION */}
         {/* ==================================================== */}
         {activeTab === 'bank' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Bank Transfer Box */}
-            <div className="bg-[#121217] border border-[#272732] rounded-3xl p-6 sm:p-8 space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 text-[#d4af37] flex items-center justify-center">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-cinzel text-lg font-bold text-white">
-                    Direct Bank Transfer (NEFT / RTGS / IMPS)
-                  </h3>
-                  <p className="text-xs text-zinc-400">
-                    Use these bank credentials to transfer amounts directly from your bank.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-[#181822] border border-[#272732] rounded-2xl p-5 space-y-3 text-xs font-mono">
-                <div className="flex justify-between border-b border-[#272732] pb-2">
-                  <span className="text-zinc-400 font-sans">Bank Name:</span>
-                  <span className="text-white font-bold">
-                    {settings?.bankInstructions?.bankName || 'State Bank of India (SBI)'}
-                  </span>
-                </div>
-
-                <div className="flex justify-between border-b border-[#272732] pb-2">
-                  <span className="text-zinc-400 font-sans">Account Holder:</span>
-                  <span className="text-white font-bold">
-                    {settings?.bankInstructions?.accountHolder || 'Sushil Meher'}
-                  </span>
-                </div>
-
-                <div className="flex justify-between border-b border-[#272732] pb-2">
-                  <span className="text-zinc-400 font-sans">Account Number:</span>
-                  <span className="text-[#d4af37] font-bold">
-                    {settings?.bankInstructions?.accountNumber || '[ADD ACTUAL ACCOUNT NUMBER HERE]'}
-                  </span>
-                </div>
-
-                <div className="flex justify-between border-b border-[#272732] pb-2">
-                  <span className="text-zinc-400 font-sans">IFSC Code:</span>
-                  <span className="text-[#d4af37] font-bold">
-                    {settings?.bankInstructions?.ifscCode || '[ADD ACTUAL IFSC CODE HERE]'}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-zinc-400 font-sans">Branch Location:</span>
-                  <span className="text-zinc-300">
-                    {settings?.bankInstructions?.branch || 'Sohela Branch, Bargarh, Odisha'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-[#14141d] rounded-xl p-3.5 border border-[#272732] text-xs text-zinc-400 space-y-1">
-                <span className="font-semibold text-white block">Note after bank transfer:</span>
-                <p>
-                  Please send the transfer reference number or screenshot to WhatsApp{' '}
-                  <a href={`https://wa.me/91${settings?.paymentPhone || '7608814804'}`} className="text-emerald-400 font-bold hover:underline">
-                    +91 {settings?.paymentPhone || '7608814804'}
-                  </a>{' '}
-                  for instant receipt generation.
-                </p>
-              </div>
-            </div>
+          <div className="space-y-8">
+            <SushilBankTransferSection
+              settings={settings}
+              initialOrderId={orderId}
+              initialAmount={amount}
+              initialService={selectedService}
+              onPaymentSuccess={(submission) => {
+                // If linked to an order, reflect success state
+                setPaymentSuccess({
+                  paymentId: (submission as any).id || 'PAY-BANK-SUBMISSION',
+                  transactionId: submission.transactionId,
+                  amount: submission.amount,
+                  date: submission.paymentDate,
+                  status: 'Pending Verification',
+                });
+              }}
+            />
 
             {/* Payment Terms & Refund Policy */}
-            <div className="space-y-6">
-              <div className="bg-[#121217] border border-[#272732] rounded-3xl p-6 sm:p-8 space-y-4">
-                <h3 className="font-cinzel text-base font-bold text-white flex items-center gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="bg-[#121217] border border-[#272732] rounded-3xl p-6 space-y-3">
+                <h3 className="font-cinzel text-sm font-bold text-white flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#d4af37]" />
-                  <span>Payment Terms</span>
+                  <span>Studio Payment Terms</span>
                 </h3>
                 <div className="text-xs text-zinc-300 whitespace-pre-line leading-relaxed bg-[#181822] p-4 rounded-2xl border border-[#272732]">
                   {settings?.paymentTerms ||
@@ -1227,10 +1180,10 @@ export const PaymentDetailsPage: React.FC<PaymentDetailsPageProps> = ({
                 </div>
               </div>
 
-              <div className="bg-[#121217] border border-[#272732] rounded-3xl p-6 sm:p-8 space-y-4">
-                <h3 className="font-cinzel text-base font-bold text-white flex items-center gap-2">
+              <div className="bg-[#121217] border border-[#272732] rounded-3xl p-6 space-y-3">
+                <h3 className="font-cinzel text-sm font-bold text-white flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Refund Policy</span>
+                  <span>Studio Refund Policy</span>
                 </h3>
                 <div className="text-xs text-zinc-300 whitespace-pre-line leading-relaxed bg-[#181822] p-4 rounded-2xl border border-[#272732]">
                   {settings?.refundPolicy ||
@@ -1240,6 +1193,7 @@ export const PaymentDetailsPage: React.FC<PaymentDetailsPageProps> = ({
             </div>
           </div>
         )}
+
 
         {/* ==================================================== */}
         {/* TAB 4: RECEIPT LOOKUP & RE-DOWNLOAD */}

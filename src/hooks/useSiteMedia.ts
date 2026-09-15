@@ -97,10 +97,38 @@ export function useSiteMedia() {
     return updateSlot(slotKey, '');
   }, [updateSlot]);
 
+  const updateConfig = useCallback(async (newConfig: Partial<SiteMediaConfig>) => {
+    setIsLoading(true);
+    try {
+      const updated: SiteMediaConfig = {
+        ...config,
+        ...newConfig,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setConfig(updated);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+
+      window.dispatchEvent(new CustomEvent(EVENT_KEY, { detail: updated }));
+      await api.updateSiteMedia(newConfig);
+      setIsLoading(false);
+      return updated;
+    } catch (err) {
+      setIsLoading(false);
+      throw err;
+    }
+  }, [config]);
+
   return {
     config,
     updateSlot,
+    updateConfig,
     removeSlot,
     isLoading,
   };
 }
+

@@ -94,10 +94,17 @@ export function useSocialMedia() {
     (settings.showYouTube && settings.youtubeUrl?.trim())
   );
 
+  const resetToDefaults = useCallback(async () => {
+    return saveSettings(DEFAULT_SETTINGS);
+  }, [saveSettings]);
+
   return {
     settings,
     saveSettings,
+    updateSettings: saveSettings,
+    resetToDefaults,
     isLoading,
     hasActiveSocialLinks,
   };
 }
+

@@ -38,7 +38,7 @@ export const AdminMediaUploadCenter: React.FC = () => {
   const fetchMediaLibrary = async () => {
     setIsLoadingList(true);
     try {
-      const items = await api.getMediaList();
+      const items = await api.getMedia();
       setMediaList(items);
     } catch (err) {
       console.warn('Could not load media library:', err);
@@ -46,6 +46,7 @@ export const AdminMediaUploadCenter: React.FC = () => {
       setIsLoadingList(false);
     }
   };
+
 
   useEffect(() => {
     fetchMediaLibrary();
