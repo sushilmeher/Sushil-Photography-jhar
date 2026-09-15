@@ -7,6 +7,7 @@ import { InvoiceModal } from './components/InvoiceModal';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal } from './components/AuthModal';
 import { BookingModal } from './components/BookingModal';
+import { BookingConfirmationModal } from './components/BookingConfirmationModal';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -29,7 +30,7 @@ import { WeddingHighlightsSection } from './components/WeddingHighlightsSection'
 import { PrivateWeddingGallery } from './components/PrivateWeddingGallery';
 
 // Types & Services
-import { ServiceItem, PackageItem, GalleryItem, ReviewItem, OrderItem } from './types';
+import { ServiceItem, PackageItem, GalleryItem, ReviewItem, OrderItem, Booking, Order } from './types';
 import { api } from './services/api';
 
 export default function App() {
@@ -51,6 +52,10 @@ export default function App() {
   // Modals States
   const [showBookingModal, setShowBookingModal] = useState<boolean>(false);
   const [selectedPackageForBooking, setSelectedPackageForBooking] = useState<PackageItem | null>(null);
+  const [confirmedBookingData, setConfirmedBookingData] = useState<{
+    booking: Booking;
+    order?: Order;
+  } | null>(null);
 
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
 
@@ -107,8 +112,8 @@ export default function App() {
     setShowBookingModal(true);
   };
 
-  const handleBookingSuccess = (bookingId: string) => {
-    showToast(`Booking request submitted! Reference ID: ${bookingId}`);
+  const handleBookingSuccess = (booking: Booking, order: Order) => {
+    setConfirmedBookingData({ booking, order });
   };
 
   const handlePaymentSuccess = (paymentId: string) => {
@@ -318,6 +323,25 @@ export default function App() {
       <Footer onNavigate={setCurrentTab} />
 
       {/* Modals */}
+      {/* 0. Booking Confirmed & Instant Payment Modal */}
+      {confirmedBookingData && (
+        <BookingConfirmationModal
+          isOpen={true}
+          booking={confirmedBookingData.booking}
+          order={confirmedBookingData.order}
+          onClose={() => setConfirmedBookingData(null)}
+          onOpenInvoice={(orderId) => {
+            setConfirmedBookingData(null);
+            setInvoiceOrderId(orderId);
+          }}
+          onNavigateToDashboard={() => {
+            setConfirmedBookingData(null);
+            setIsCustomerLoggedIn(true);
+            setCurrentTab('customer-dashboard');
+          }}
+        />
+      )}
+
       {/* 1. Booking Reservation Modal */}
       <BookingModal
         isOpen={showBookingModal}

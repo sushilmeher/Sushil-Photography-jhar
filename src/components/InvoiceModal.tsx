@@ -1,15 +1,59 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { X, Printer, Download, CheckCircle2, Camera } from 'lucide-react';
 import { InvoiceData } from '../types';
 import { BUSINESS_INFO } from '../data/mockData';
+import { api } from '../services/api';
 
 interface InvoiceModalProps {
-  invoice: InvoiceData | null;
+  invoice?: InvoiceData | null;
+  orderId?: string | null;
   onClose: () => void;
 }
 
-export const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, onClose }) => {
+export const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice: initialInvoice, orderId, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const [invoice, setInvoice] = useState<InvoiceData | null>(initialInvoice || null);
+
+  useEffect(() => {
+    if (initialInvoice) {
+      setInvoice(initialInvoice);
+    } else if (orderId) {
+      // Find or build invoice from order
+      api.getOrders().then((orders) => {
+        const ord = orders.find((o) => o.id === orderId);
+        if (ord) {
+          const total = ord.totalAmount || ord.amount || 15000;
+          const advance = ord.advancePaid || 0;
+          const balance = ord.balanceAmount !== undefined ? ord.balanceAmount : Math.max(0, total - advance);
+          const generatedInvoice: InvoiceData = {
+            invoiceNumber: `SPJ-INV-${ord.id.replace(/\D/g, '') || '1001'}`,
+            orderId: ord.id,
+            customerName: ord.customerName,
+            customerPhone: ord.phone || ord.customerPhone || '7608814804',
+            customerEmail: ord.email || 'sushilmeher947@gmail.com',
+            customerAddress: 'Bargarh, Odisha, India',
+            service: ord.service || ord.serviceType || 'Wedding Photography',
+            packageName: ord.package || ord.packageName || 'Master Photo Package',
+            price: total,
+            advance: advance,
+            remainingAmount: balance,
+            paymentStatus: balance === 0 ? 'Paid Full' : advance > 0 ? 'Advance Paid' : 'Pending',
+            date: ord.createdAt ? new Date(ord.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+            dueDate: ord.eventDate || 'On Event Delivery',
+            items: [
+              {
+                description: `${ord.service || 'Photography Service'} - ${ord.package || 'Custom Booking'}`,
+                quantity: 1,
+                rate: total,
+                amount: total,
+              },
+            ],
+          };
+          setInvoice(generatedInvoice);
+        }
+      });
+    }
+  }, [initialInvoice, orderId]);
 
   if (!invoice) return null;
 

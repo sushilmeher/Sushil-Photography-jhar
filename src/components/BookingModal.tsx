@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { X, Calendar, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, Calendar, Sparkles, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react';
 import { api } from '../services/api';
-import { PackageItem } from '../types';
+import { PackageItem, Booking, Order } from '../types';
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedPackage?: PackageItem | null;
-  onBookingSuccess: (bookingId: string) => void;
+  onBookingSuccess: (booking: Booking, order: Order) => void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -37,27 +37,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
       const res = await api.createBooking({
-        customerName,
-        phone,
+        customerName: customerName.trim(),
+        phone: phone.trim(),
         weddingDate,
-        venue,
-        city,
+        venue: venue.trim(),
+        city: city.trim(),
         packageChosen: selectedPackage ? selectedPackage.name : 'Custom Wedding Package',
-        budget: selectedPackage ? `₹${selectedPackage.price.toLocaleString()}` : '₹12,000 - ₹20,000',
+        packageName: selectedPackage ? selectedPackage.name : 'Custom Wedding Package',
+        budget: selectedPackage ? `₹${selectedPackage.price.toLocaleString()}` : '₹15,000',
+        estimatedAmount: selectedPackage ? selectedPackage.price : 15000,
         requiredServices: services,
-        notes,
+        notes: notes.trim(),
       });
 
       setIsSubmitting(false);
-      onBookingSuccess(res.bookingId);
+      onBookingSuccess(res.booking, res.order);
       onClose();
     } catch (err: any) {
       setIsSubmitting(false);
-      alert('Booking error: ' + (err.message || 'Please check your connection'));
+      alert('Booking error: ' + (err.message || 'Please check your connection and try again.'));
     }
   };
 

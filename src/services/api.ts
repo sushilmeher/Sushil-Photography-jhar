@@ -278,6 +278,19 @@ export const api = {
     return res.json();
   },
 
+  async submitBankTransfer(payload: any): Promise<{ success: boolean; payment: PaymentRecord; message?: string }> {
+    const res = await fetch('/api/payments/bank-transfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Bank transfer submission failed' }));
+      throw new Error(err.error || 'Bank transfer submission failed');
+    }
+    return res.json();
+  },
+
   async getPayments(filters?: {
     search?: string;
     status?: string;
