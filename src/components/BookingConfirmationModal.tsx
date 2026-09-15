@@ -455,7 +455,7 @@ export const BookingConfirmationModal: React.FC<BookingConfirmationModalProps> =
               {/* Email dispatch notice */}
               <div className="p-3 bg-[#121216] border border-zinc-800 rounded-xl flex items-center justify-center gap-2 text-[11px] text-zinc-400">
                 <Mail className="w-4 h-4 text-[#d4af37]" />
-                <span>Confirmation dispatched to: <strong>sushilmeher947@gmail.com</strong></span>
+                <span>Confirmation dispatched to: <strong>{booking.email || 'sushilmeher947@gmail.com'}</strong></span>
               </div>
 
               {/* CTAs */}

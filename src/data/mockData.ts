@@ -10,7 +10,7 @@ export const BUSINESS_INFO = {
   location: 'Jhar, Sohela, Bargarh, Odisha, India',
   phone: '7608814804',
   secondaryPhone: '7735045136',
-  email: 'sushilphotographyjhar@gmail.com',
+  email: 'sushilmeher947@gmail.com',
   website: 'sushilphotographyjhar.com',
   instagram: 'https://instagram.com/sushil_photography_jhar',
   facebook: 'https://facebook.com/sushilphotographyjhar',
